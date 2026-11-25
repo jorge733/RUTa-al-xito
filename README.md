@@ -8,12 +8,14 @@ Un simulador de emprendimiento en el que creas tu propia empresa en Chile: elige
 
 No necesita instalación. Abre `index.html` en el navegador, o publícalo con **GitHub Pages** (Settings → Pages → Branch `main` / root).
 
-### Una ciudad en 3D
-El juego ocurre en una plaza en 3D con todos los edificios de los trámites alrededor y el sitio donde estará tu negocio.
-- **Clic o toque** en un edificio: tu personaje camina hasta allá y entra.
-- **WASD / flechas** para caminar, **E** para entrar al edificio más cercano y **rueda del mouse** para el zoom.
-- Los edificios con **!** tienen trámites disponibles y el SII muestra un **$** cuando debes el F29.
-- Tu negocio empieza como un sitio con un letrero de "SE ARRIENDA". Cuando lo arriendas aparece el edificio, y al abrir se encienden las luces y llegan clientes.
+### Un mundo inmersivo en 3D
+El juego ocurre a pantalla completa en una plaza de una ciudad chilena, con la cordillera al fondo.
+- **Tercera persona:** caminas con **WASD** (Shift para correr), haces **clic** donde quieres ir y **arrastras** el mouse para mirar. **Q/R** giran la cámara y la rueda hace zoom.
+- **Edificios por dentro:** entras al Registro Civil, al SII, al banco, a la municipalidad… En las oficinas públicas **sacas número en el tótem**, esperas a que la pantalla te llame ("A-68, módulo 2") y **hablas con el funcionario** en el módulo que te toca.
+- **Reloj y día/noche:** el tiempo corre (1 segundo = 2 minutos). Las oficinas públicas atienden de **lunes a viernes de 9:00 a 14:00**. Si llegas tarde o se acaba el horario mientras esperas, vuelves mañana. Al atardecer se encienden los faroles y las ventanas, y a las 21:00 te vas a casa.
+- **Sonido y voces:** ambiente de ciudad y de oficina, pasos, el "ding" de la pantalla de números y voces sintetizadas para los funcionarios (con el navegador). **M** silencia.
+- **Tu negocio:** primero es un sitio con un letrero de "SE ARRIENDA". Cuando lo arriendas aparece el local, y al abrir se encienden las luces, tus trabajadores atienden y llegan clientes. Se gestiona desde la caja del local.
+- **HUD:** el haz de luz amarilla marca tu próximo paso. **T** trámites, **N** negocio, **B** bitácora.
 
 ### Fase 1: la burocracia
 - Elige entre 6 rubros: ☕ cafetería, 🥖 panadería, 🔧 taller mecánico, 💻 agencia de software, 🚚 food truck y 🛍️ tienda online.
@@ -37,7 +39,11 @@ css/styles.css    Estilos
 js/data.js        Datos: rubros, lugares, trámites, sociedades, eventos
 js/game.js        Lógica: tiempo, trámites, ventas, impuestos, final
 js/ui.js          Interfaz y pantallas
-js/escena3d.js    Ciudad en 3D (edificios, personaje, clientes, cámara)
+js/audio.js       Sonido procedural (Web Audio) y voces
+js/3d/base.js     Texturas procedurales, materiales y modelos (personas, árboles, autos)
+js/3d/exterior.js Plaza, edificios, ciudad, cordillera, cielo y ciclo día/noche
+js/3d/interior.js Interiores: oficinas con fila, banco, punto digital, bodega, tu local
+js/escena3d.js    Controlador: cámara, movimiento, entrar/salir, filas y reloj
 js/vendor/        Three.js r128 (incluido para que funcione sin internet)
 ```
 

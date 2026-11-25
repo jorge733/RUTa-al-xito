@@ -27,12 +27,28 @@ function textoFecha(f) {
 function esFinDeSemana(f) { const d = f.getDay(); return d === 0 || d === 6; }
 
 function log(texto, tipo = 'info') {
-  G.bitacora.unshift({ fecha: textoFecha(fechaActual()), texto, tipo });
+  G.seq = (G.seq || 0) + 1;
+  G.bitacora.unshift({ fecha: textoFecha(fechaActual()), texto, tipo, seq: G.seq });
   if (G.bitacora.length > 120) G.bitacora.pop();
 }
 
-function encolar(titulo, html, botones) {
-  colaModal.push({ titulo, html, botones: botones || [{ texto: 'Seguir' }] });
+// opciones: { hablante } muestra el mensaje como diálogo con un personaje
+function encolar(titulo, html, botones, opciones = {}) {
+  colaModal.push({ titulo, html, botones: botones || [{ texto: 'Seguir' }], ...opciones });
+}
+
+// Reloj del día (minutos desde las 00:00). Cada día nuevo parte a las 8:00.
+const HORA_INICIO_DIA = 8 * 60;
+function horaTexto(min) {
+  min = Math.floor(min);
+  return `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+function lugarAbierto(id) {
+  const l = LUGARES[id];
+  if (l.online) return true;
+  if (esFinDeSemana(fechaActual())) return false;
+  const h = G.hora ?? HORA_INICIO_DIA;
+  return h >= l.abre && h < l.cierra;
 }
 
 // Genera un RUT válido (con dígito verificador módulo 11)
@@ -54,7 +70,7 @@ function generarRut() {
 function nuevoJuego(jugador, empresa, rubroId) {
   G = {
     version: 1, jugador, empresa, rubroId,
-    diaJuego: 0,
+    diaJuego: 0, hora: HORA_INICIO_DIA,
     caja: CAPITAL_INICIAL,
     paciencia: 100,
     reputacion: 50,
@@ -170,7 +186,7 @@ function intentarTramite(id, opciones = {}) {
     if (G.paciencia <= 0) {
       html += colapso();
     }
-    encolar(`🙅 ${lugar.nombre}: vuelva mañana`, html);
+    encolar(`🙅 ${lugar.nombre}: vuelva mañana`, html, null, { hablante: opciones.hablante, sonido: 'rechazo' });
     guardar();
     return true;
   }
@@ -189,12 +205,12 @@ function intentarTramite(id, opciones = {}) {
   if (costo > 0) html += `<p>Pagaste ${dinero(costo)}.</p>`;
   html += efectoEspecial(t, opciones);
   log(`Trámite completado: ${nombreTramite(t)}${costo ? ' (' + dinero(costo) + ')' : ''}.`, 'bueno');
-  encolar(`✅ ${lugar.nombre}`, html);
+  encolar(`✅ ${lugar.nombre}`, html, null, { hablante: opciones.hablante, sonido: 'exito' });
 
   if (G.fase === 'tramites' && puedeAbrir() && !G.flags.avisoAbrir) {
     G.flags.avisoAbrir = true;
     encolar('🎉 ¡Todo en regla!', `<p>Tienes todos los permisos. Ya puedes <b>abrir las puertas</b> de ${G.empresa}.</p>
-      <p>Búscalo en la lista de trámites.</p>`);
+      <p>Ve a tu local (o usa la lista de trámites) para cortar la cinta.</p>`, null, { sonido: 'exito' });
   }
   guardar();
   return true;
@@ -274,6 +290,7 @@ function abrirNegocio() {
 function avanzarDia() {
   if (G.fase === 'fin') return;
   G.diaJuego++;
+  G.hora = HORA_INICIO_DIA;
   const f = fechaActual();
   G.paciencia = clamp(G.paciencia + 4, -100, 100);
 

@@ -257,3 +257,122 @@ input:focus { outline: 2px solid var(--azul); outline-offset: 1px; }
 @media (max-width: 760px) {
   #escena3d { height: 380px; }
 }
+
+/* =========================================================
+   Modo inmersivo (3D a pantalla completa)
+   ========================================================= */
+body.modo-3d { overflow: hidden; background: #0d1320; }
+.juego3d { position: fixed; inset: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.lienzo { position: absolute; inset: 0; }
+.lienzo .canvas3d { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.lienzo .canvas3d:active { cursor: grabbing; }
+
+.hud-arriba {
+  position: absolute; top: 12px; left: 12px; right: 330px;
+  display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
+}
+.hud-chip {
+  background: rgba(12, 18, 32, .62); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: .4em .8em;
+  display: flex; flex-direction: column; min-width: 96px; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.hud-chip small { color: rgba(255,255,255,.7); font-size: .72rem; }
+.hud-chip b { font-size: 1rem; }
+.hud-chip.neg b { color: #ff8a80; }
+.hud-chip.reloj b { font-size: 1.5rem; font-variant-numeric: tabular-nums; letter-spacing: .02em; line-height: 1.1; }
+.hud-chip .barrita { background: rgba(255,255,255,.2); width: 110px; }
+
+.hud-botones { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 320px; }
+.hud-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(12, 18, 32, .62); color: #fff; border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border-radius: 12px; padding: .45em .6em; font: inherit; font-size: 1.15rem; cursor: pointer; min-width: 50px;
+}
+.hud-btn span { font-size: .64rem; opacity: .85; }
+.hud-btn:hover, .hud-btn.activo { background: rgba(11, 61, 145, .85); }
+
+.hud-objetivo {
+  position: absolute; top: 86px; left: 12px; max-width: min(560px, calc(100% - 24px));
+  background: rgba(255, 210, 74, .92); color: #2a2100; font-weight: 600; font-size: .92rem;
+  padding: .45em .9em; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.25); cursor: pointer;
+}
+.hud-fila {
+  position: absolute; top: 132px; left: 12px; display: none; align-items: center; gap: .7em; flex-wrap: wrap;
+  background: rgba(12, 18, 32, .78); color: #fff; padding: .5em .8em; border-radius: 12px; font-size: .92rem;
+}
+.hud-fila.visible { display: flex; }
+.ticket { background: #fff; color: #123a6b; font-weight: 800; padding: .2em .6em; border-radius: 6px; border: 2px dashed #123a6b; }
+.ticket.llamado { background: #ffd24a; animation: latido 1s infinite; }
+
+.hud-prompt {
+  position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+  background: rgba(12, 18, 32, .82); color: #fff; border: 1px solid rgba(255,255,255,.2);
+  padding: .6em 1.1em; border-radius: 30px; font: inherit; font-weight: 600; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3); white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis;
+}
+.hud-prompt.oculto { display: none; }
+kbd {
+  display: inline-block; background: #fff; color: #123a6b; border-radius: 5px; padding: 0 .45em;
+  font: 700 .85em system-ui, sans-serif; margin-right: .3em; box-shadow: 0 2px 0 #9aa;
+}
+.hud-ayuda {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,.85); font-size: .78rem; text-shadow: 0 1px 3px rgba(0,0,0,.8); white-space: nowrap; pointer-events: none;
+}
+
+.toasts { position: fixed; right: 12px; bottom: 60px; z-index: 15; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none; }
+.toast {
+  background: rgba(12, 18, 32, .85); color: #fff; padding: .55em .9em; border-radius: 10px; max-width: 360px; font-size: .88rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3); animation: entraToast .3s ease-out; transition: opacity .5s, transform .5s;
+}
+.toast.salir { opacity: 0; transform: translateX(20px); }
+.toast-bueno { color: #a6f4c5; } .toast-malo { color: #ffb3ab; } .toast-alerta { color: #ffe08a; } .toast-evento { color: #d4c2ff; }
+@keyframes entraToast { from { opacity: 0; transform: translateX(30px); } }
+
+.fundido {
+  position: fixed; inset: 0; background: #000; z-index: 18; opacity: 0; pointer-events: none; transition: opacity .35s;
+  display: grid; place-items: center;
+}
+.fundido.activo { opacity: 1; }
+.fundido::after { content: attr(data-texto); color: #fff; font-size: 1.6rem; font-style: italic; opacity: .9; }
+
+.cajon {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(440px, 100%);
+  background: var(--fondo); box-shadow: -10px 0 30px rgba(0,0,0,.3);
+  transform: translateX(105%); transition: transform .25s ease-out; display: flex; flex-direction: column; z-index: 6;
+}
+.cajon.abierto { transform: none; }
+.cajon-cabecera { display: flex; justify-content: space-between; align-items: center; padding: .9em 1em; background: #fff; box-shadow: var(--sombra); }
+.cajon-cuerpo { overflow: auto; padding: 1em; flex: 1; }
+.cajon-cuerpo .bitacora ul { max-height: none; }
+
+/* Diálogo con personajes */
+.modal.dialogo { place-items: end center; background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0) 60%); }
+.modal.dialogo .modal-caja {
+  width: min(760px, 100%); margin-bottom: 12px; border-radius: 16px;
+  background: rgba(255,255,255,.97); border-top: 5px solid var(--azul); position: relative; padding-top: 1.6em;
+}
+.modal.dialogo .modal-caja h2 { font-size: 1rem; color: var(--suave); margin-bottom: .4em; }
+.modal.dialogo .modal-acciones { flex-direction: row; flex-wrap: wrap; }
+.modal.dialogo .modal-acciones .btn { flex: 1 1 auto; }
+.hablante {
+  position: absolute; top: -16px; left: 20px; background: var(--azul); color: #fff; font-weight: 700;
+  padding: .3em .9em; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+
+@media (max-width: 760px) {
+  .hud-arriba { right: 12px; top: 64px; gap: 5px; }
+  .hud-chip { min-width: 0; padding: .3em .55em; }
+  .hud-chip .barrita { width: 70px; }
+  .hud-chip.reloj b { font-size: 1.15rem; }
+  .hud-botones { left: 12px; right: 12px; max-width: none; justify-content: flex-start; }
+  .hud-btn { flex-direction: row; font-size: 1rem; min-width: 0; }
+  .hud-btn span { display: none; }
+  .hud-objetivo { top: auto; bottom: 120px; font-size: .82rem; }
+  .hud-fila { top: auto; bottom: 165px; }
+  .hud-ayuda { display: none; }
+  .hud-prompt { bottom: 24px; }
+  .toasts { bottom: auto; top: 150px; }
+}
+#escena3d.lienzo { position: absolute; inset: 0; height: auto; background: #0d1320; }

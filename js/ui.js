@@ -4,7 +4,15 @@
 
 const app = document.getElementById('app');
 const modal = document.getElementById('modal');
-const hay3D = typeof Escena3D !== 'undefined' && Escena3D.init(id => entrarEdificio(id));
+let cajon = null;          // Panel lateral abierto: 'tramites' | 'negocio' | 'bitacora'
+let ultimoSeqVisto = 0;    // Para mostrar avisos nuevos de la bitácora
+const hay3D = typeof Escena3D !== 'undefined' && Escena3D.init({
+  onInteractuar: ev => manejarInteraccion(ev),
+  onPrompt: (texto) => actualizarPrompt(texto),
+  onAviso: (texto, ms) => aviso(texto, ms),
+  onFila: f => actualizarFila(f),
+  onCambioModo: () => { if (G && G.fase !== 'fin') render(); },
+});
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -16,8 +24,21 @@ function esc(s) {
 function mostrarSiguienteModal() {
   if (!colaModal.length) { modal.classList.add('oculto'); return; }
   const m = colaModal[0];
+  const dialogo = !!m.hablante && hay3D;
+  modal.classList.toggle('dialogo', dialogo);
+  if (!m.mostrado) {
+    m.mostrado = true;
+    if (m.sonido && typeof Audio3D !== 'undefined') Audio3D.efecto(m.sonido);
+    if (dialogo && typeof Audio3D !== 'undefined') {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = m.voz || m.html;
+      const primero = tmp.querySelector('.cita, p');
+      if (primero) Audio3D.hablar(primero.textContent.slice(0, 220));
+    }
+  }
   modal.innerHTML = `
     <div class="modal-caja" role="dialog" aria-modal="true">
+      ${dialogo ? `<div class="hablante">🗣️ ${esc(m.hablante)}</div>` : ''}
       <h2>${m.titulo}</h2>
       <div class="modal-cuerpo">${m.html}</div>
       <div class="modal-acciones">
@@ -37,8 +58,8 @@ function mostrarSiguienteModal() {
   if (primero) primero.focus();
 }
 
-function abrirModalAhora(titulo, html, botones) {
-  colaModal.unshift({ titulo, html, botones: botones || [{ texto: 'Cerrar' }] });
+function abrirModalAhora(titulo, html, botones, opciones = {}) {
+  colaModal.unshift({ titulo, html, botones: botones || [{ texto: 'Cerrar' }], ...opciones });
   mostrarSiguienteModal();
 }
 
@@ -46,10 +67,17 @@ function abrirModalAhora(titulo, html, botones) {
 //  Render principal
 // ------------------------------------------------------------
 function render() {
+  const modo3D = hay3D && G && G.fase !== 'fin';
+  document.body.classList.toggle('modo-3d', !!modo3D);
+  document.body.classList.toggle('cajon-abierto', !!(modo3D && cajon));
   if (!G) renderInicio();
   else if (G.fase === 'fin') renderFinal();
   else renderJuego();
-  if (hay3D && G && G.fase !== 'fin') Escena3D.actualizar();
+  if (modo3D) {
+    Escena3D.actualizar();
+    Escena3D.setObjetivo(objetivoActual().lugar);
+    mostrarAvisosNuevos();
+  }
   mostrarSiguienteModal();
 }
 
@@ -116,12 +144,13 @@ function renderInicio() {
     encolar('👋 ¡Bienvenido al mundo del emprendimiento!', `
       <p>Hola <b>${esc(G.jugador)}</b>. Para que <b>${esc(G.empresa)}</b> pueda abrir, necesitas completar varios trámites.</p>
       <ul>
-        <li>Camina por la plaza y <b>entra a los edificios</b> para hacer trámites (clic en el edificio, o WASD + E).</li>
-        <li>El sitio con el letrero <b>"SE ARRIENDA"</b> será tu negocio.</li>
-        <li>Algunos trámites <b>requieren otros</b> primero. Revisa la lista de la izquierda.</li>
-        <li>Las oficinas presenciales <b>cierran el fin de semana</b>.</li>
+        <li>Camina con <b>WASD</b> (Shift para correr) o haz <b>clic</b> donde quieras ir. Arrastra el mouse para mirar.</li>
+        <li>Entra a los edificios y habla con los funcionarios (<b>E</b>). En las oficinas públicas primero <b>saca número</b> en el tótem.</li>
+        <li>El haz de luz amarilla marca tu <b>próximo paso</b>. El sitio con el letrero <b>"SE ARRIENDA"</b> será tu negocio.</li>
+        <li>Las oficinas públicas atienden de <b>lunes a viernes, de 9:00 a 14:00</b>. A las 21:00 te vas a casa.</li>
         <li>Si te rechazan, pierdes el día y <b>paciencia</b>. Si llega a cero, colapsas.</li>
         <li>Cuando arriendes el local, el <b>arriendo corre</b> todos los meses: ¡no te demores!</li>
+        <li><b>T</b> trámites · <b>B</b> bitácora · <b>M</b> sonido.</li>
       </ul>`, [{ texto: '¡Vamos!' }]);
     render();
     window.scrollTo(0, 0);
@@ -132,34 +161,164 @@ function renderInicio() {
 //  Pantalla de juego
 // ------------------------------------------------------------
 function renderJuego() {
-  const r = rubro();
+  if (hay3D) return renderJuego3D();
   app.innerHTML = `
     ${barraEstado()}
     <div class="layout">
       <aside class="col-izq">${panelTramites()}</aside>
       <section class="col-centro">
-        ${hay3D ? escena() : ''}
         ${G.fase === 'operacion' ? panelOperacion() : panelEspera()}
-        ${hay3D ? '' : mapa()}
+        ${mapa()}
       </section>
       <aside class="col-der">${panelBitacora()}</aside>
     </div>`;
   enlazarEventosJuego();
-  if (hay3D) Escena3D.montar(document.getElementById('escena3d'));
 }
 
-function escena() {
-  return `
-  <div class="tarjeta escena">
-    <div id="escena3d"></div>
-    <div class="escena-ayuda">🖱️ Haz clic en un edificio para ir · <b>WASD</b>/flechas para caminar · <b>E</b> para entrar · rueda para zoom</div>
+// ------------------------------------------------------------
+//  Modo inmersivo: 3D a pantalla completa + HUD
+// ------------------------------------------------------------
+function renderJuego3D() {
+  const r = rubro();
+  const pac = clamp(G.paciencia, 0, 100);
+  const obj = objetivoActual();
+  const enNegocio = Escena3D.lugarActual === 'negocio';
+  const titulosCajon = { tramites: '📋 Trámites', negocio: `📊 ${esc(G.empresa)}`, bitacora: '📰 Bitácora' };
+  const contenidoCajon = cajon === 'tramites' ? panelTramites() : cajon === 'negocio' ? (G.fase === 'operacion' ? panelOperacion() : '') : cajon === 'bitacora' ? panelBitacora() : '';
+  app.innerHTML = `
+  <div class="juego3d">
+    <div id="escena3d" class="lienzo"></div>
+
+    <div class="hud-arriba">
+      <div class="hud-chip reloj"><b id="hudReloj">${horaTexto(G.hora)}</b><small>${textoFecha(fechaActual())}</small></div>
+      <div class="hud-chip ${G.caja < 0 ? 'neg' : ''}"><small>💰 Caja</small><b>${dinero(G.caja)}</b></div>
+      <div class="hud-chip"><small>🧘 Paciencia</small><div class="barrita"><i style="width:${pac}%" class="${pac < 30 ? 'baja' : ''}"></i></div></div>
+      <div class="hud-chip"><small>⭐ Reputación</small><div class="barrita"><i style="width:${G.reputacion}%" class="rep"></i></div></div>
+      ${G.fase === 'operacion' ? `<div class="hud-chip"><small>📆 Semana</small><b>${G.semanasOperando}/${SEMANAS_PARA_GANAR}</b></div>` : ''}
+    </div>
+
+    <div class="hud-botones">
+      <button class="hud-btn ${cajon === 'tramites' ? 'activo' : ''}" data-cajon="tramites" title="Trámites (T)">📋<span>Trámites</span></button>
+      ${G.fase === 'operacion' ? `<button class="hud-btn ${cajon === 'negocio' ? 'activo' : ''}" data-cajon="negocio" title="Mi negocio (N)">📊<span>Negocio</span></button>` : ''}
+      <button class="hud-btn ${cajon === 'bitacora' ? 'activo' : ''}" data-cajon="bitacora" title="Bitácora (B)">📰<span>Bitácora</span></button>
+      <button class="hud-btn" data-accion="casa" title="Terminar el día">🛏️<span>Ir a casa</span></button>
+      <button class="hud-btn" data-accion="sonido" title="Sonido (M)">${typeof Audio3D !== 'undefined' && Audio3D.silencio ? '🔇' : '🔊'}<span>Sonido</span></button>
+      <button class="hud-btn" data-accion="menu" title="Menú">☰<span>Menú</span></button>
+    </div>
+
+    <div class="hud-objetivo" data-ir="${obj.lugar || ''}">🎯 <span>${obj.texto}</span></div>
+    <div class="hud-fila" id="hudFila"></div>
+    <button class="hud-prompt oculto" id="hudPrompt"></button>
+    <div class="hud-ayuda">${enNegocio ? 'Acércate a la caja para gestionar · ' : ''}WASD caminar · Shift correr · arrastra para mirar · E interactuar · Q/R girar</div>
+
+    <aside class="cajon ${cajon ? 'abierto' : ''}">
+      <div class="cajon-cabecera"><b>${titulosCajon[cajon] || ''}</b><button class="btn chico" data-cajon="${cajon}">✕</button></div>
+      <div class="cajon-cuerpo">${contenidoCajon}</div>
+    </aside>
   </div>`;
+  enlazarEventosJuego();
+  Escena3D.montar(document.getElementById('escena3d'));
+  actualizarFila(Escena3D.fila);
 }
 
-function entrarEdificio(id) {
-  if (!G || G.fase === 'fin' || colaModal.length) return;
-  if (id === 'negocio') infoNegocio();
-  else abrirLugar(id);
+function alternarCajon(nombre) {
+  cajon = cajon === nombre || !nombre ? null : nombre;
+  render();
+}
+
+// Siguiente paso sugerido (y edificio a resaltar con el haz de luz)
+function objetivoActual() {
+  if (G.fase === 'operacion') {
+    if (deudaF29() > 0) return { texto: 'Declara y paga el F29 en el SII antes del día 20', lugar: 'sii' };
+    if (!hecho('mutual') && capacidadSemanal() < demandaSemanal()) return { texto: 'No das abasto: adhiérete a la mutual para poder contratar', lugar: 'mutual' };
+    return { texto: `Semana ${G.semanasOperando + 1} de ${SEMANAS_PARA_GANAR} · Gestiona tu negocio desde la caja de tu local`, lugar: 'negocio' };
+  }
+  if (puedeAbrir()) return { texto: '¡Tienes todos los permisos! Ve a tu local y corta la cinta', lugar: 'negocio' };
+  const t = tramitesAplicables().find(t => esObligatorio(t) && estadoTramite(t) === 'disponible');
+  if (t) return { texto: `${nombreTramite(t)} — ${LUGARES[t.lugar].nombre.replace(' (online)', '')}`, lugar: t.lugar };
+  return { texto: 'Revisa tus trámites (T)', lugar: null };
+}
+
+function actualizarPrompt(texto) {
+  const el = document.getElementById('hudPrompt');
+  if (!el) return;
+  el.classList.toggle('oculto', !texto);
+  el.innerHTML = texto ? `<kbd>E</kbd> ${esc(texto)}` : '';
+}
+
+function actualizarFila(f) {
+  const el = document.getElementById('hudFila');
+  if (!el) return;
+  if (!f || Escena3D.lugarActual !== f.lugar) { el.innerHTML = ''; el.classList.remove('visible'); return; }
+  el.classList.add('visible');
+  el.innerHTML = f.llamado
+    ? `<span class="ticket llamado">🎟️ ${f.letra}-${f.numero}</span><b>¡Es tu turno! Ve al módulo ${f.modulo}</b>`
+    : `<span class="ticket">🎟️ ${f.letra}-${f.numero}</span><span>Atendiendo: <b>${f.letra}-${f.actual}</b></span><button class="btn chico" data-esperar>⏩ Esperar sentado</button>`;
+  const b = el.querySelector('[data-esperar]');
+  if (b) b.onclick = () => Escena3D.esperarTurno();
+}
+
+function aviso(texto, ms = 4500) {
+  const cont = document.getElementById('toasts');
+  if (!cont) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = texto;
+  cont.appendChild(el);
+  while (cont.children.length > 4) cont.firstChild.remove();
+  setTimeout(() => el.classList.add('salir'), ms);
+  setTimeout(() => el.remove(), ms + 600);
+}
+
+function mostrarAvisosNuevos() {
+  const nuevos = G.bitacora.filter(b => (b.seq || 0) > ultimoSeqVisto).slice(0, 3).reverse();
+  if (ultimoSeqVisto === 0) { ultimoSeqVisto = G.seq || 0; return; }
+  ultimoSeqVisto = G.seq || 0;
+  nuevos.forEach(b => aviso(`<span class="toast-${b.tipo}">${b.texto}</span>`));
+}
+
+// Lo que pasa al interactuar con el mundo 3D
+function manejarInteraccion(ev) {
+  if (!G || G.fase === 'fin') return;
+  const l = ev.lugar ? LUGARES[ev.lugar] : null;
+  switch (ev.tipo) {
+    case 'negocio': return infoNegocio();
+    case 'gestion':
+      if (G.fase === 'operacion') { cajon = 'negocio'; render(); return; }
+      return infoNegocio();
+    case 'cerrado': {
+      const finde = esFinDeSemana(fechaActual());
+      const antes = !finde && G.hora < l.abre;
+      const botones = [];
+      if (antes) botones.push({ texto: `⏳ Esperar a que abra (${horaTexto(l.abre)})`, accion: () => { G.hora = l.abre; guardar(); } });
+      botones.push({ texto: '🛏️ Ir a casa y volver mañana', accion: () => { esperarDia(); } });
+      botones.push({ texto: 'OK', clase: ' ' });
+      abrirModalAhora(`🔒 ${l.nombre} está cerrado`, `<p class="cita">"Horario de atención: ${horarioLugar(l)}."</p>
+        <p>${finde ? 'Es fin de semana: vuelve el lunes.' : antes ? 'Todavía no abren.' : 'Ya cerraron por hoy.'}</p>`, botones, { hablante: 'Guardia' });
+      return;
+    }
+    case 'cierreAtencion':
+      abrirModalAhora('⌛ Se terminó la atención', `<p class="cita">"Señores, se terminó el horario de atención. Los números que quedan se atienden mañana."</p>
+        <p>Te quedaste sin atención. Vuelve mañana más temprano.</p>`, [{ texto: 'Salir', accion: () => Escena3D.volverAlExterior() }], { hablante: 'Guardia', sonido: 'rechazo' });
+      return;
+    case 'sinNumero':
+      abrirModalAhora(`${l.emoji} ${l.nombre}`, `<p class="cita">"Buenos días. Primero tiene que sacar número en el tótem de la entrada, por favor."</p>`,
+        [{ texto: 'Ok, voy' }], { hablante: ev.hablante });
+      return;
+    case 'noEsTuTurno':
+      abrirModalAhora(`${l.emoji} ${l.nombre}`, `<p class="cita">"Todavía no es su turno. Vamos en el ${ev.fila.letra}-${ev.fila.actual} y usted tiene el ${ev.fila.letra}-${ev.fila.numero}. Tome asiento, por favor."</p>`,
+        [{ texto: 'Esperar', accion: () => Escena3D.esperarTurno() }, { texto: 'Cerrar', clase: ' ' }], { hablante: ev.hablante });
+      return;
+    case 'otroModulo':
+      abrirModalAhora(`${l.emoji} ${l.nombre}`, `<p class="cita">"Su número lo atienden en el módulo ${ev.fila.modulo}, no en este."</p>`,
+        [{ texto: 'Perdón' }], { hablante: ev.hablante });
+      return;
+    case 'atencion': return abrirLugar(ev.lugar, ev.hablante);
+    case 'finDia':
+      abrirModalAhora('🌙 Se hizo de noche', `<p>Ya son las ${horaTexto(G.hora)}. Te vas a casa a descansar.</p>`,
+        [{ texto: '🛏️ Dormir hasta mañana', accion: () => { esperarDia(); Escena3D.volverAlExterior(); } }]);
+      return;
+  }
 }
 
 function infoNegocio() {
@@ -171,10 +330,11 @@ function infoNegocio() {
       <ul><li>Trabajadores: ${G.empleados} (+ tú)</li>
       <li>Precio: ${dinero(precioActual())}</li>
       <li>Última semana: ${s ? `${s.ventas} ${r.unidad}, ${dinero(s.ingresos)}` : 'aún sin cierre'}</li></ul>`;
-    botones.push({ texto: '⏩ Trabajar una semana', accion: () => avanzarSemana() });
+    botones.push({ texto: '📊 Gestionar', accion: () => { cajon = 'negocio'; } });
+    botones.push({ texto: '⏩ Trabajar una semana', clase: ' ', accion: () => avanzarSemana() });
   } else if (puedeAbrir()) {
     html = '<p>¡Tienes todos los permisos! ¿Cortamos la cinta?</p>';
-    botones.push({ texto: '🎊 Abrir el negocio', accion: () => abrirNegocio() });
+    botones.push({ texto: '🎊 Cortar la cinta y abrir', accion: () => { abrirNegocio(); if (hay3D) Escena3D.refrescarInterior(); } });
   } else if (hecho('arriendo')) {
     html = `<p>Ya tienes el lugar, pero te faltan permisos para abrir:</p>
       <ul>${tramitesAplicables().filter(t => esObligatorio(t) && !hecho(t.id)).map(t => `<li>${nombreTramite(t)} <small>(${LUGARES[t.lugar].nombre})</small></li>`).join('')}</ul>`;
@@ -318,7 +478,7 @@ function mapa() {
         return `<button class="edificio ${disp || f29 ? 'activo' : ''} ${cerrado ? 'cerrado' : ''}" data-lugar-abrir="${id}">
           <span class="ed-emoji">${l.emoji}</span>
           <b>${l.nombre}</b>
-          <small>${cerrado ? '🔒 Cerrado hoy' : l.horario}</small>
+          <small>${cerrado ? '🔒 Cerrado hoy' : horarioLugar(l)}</small>
           ${disp || f29 ? `<span class="badge">${disp + (f29 ? 1 : 0)}</span>` : ''}
         </button>`;
       }).join('')}
@@ -349,18 +509,28 @@ function enlazarEventosJuego() {
       if (a === 'despedir') despedir();
       if (a === 'f29') pagarF29();
       if (a === 'menu') return abrirMenu();
+      if (a === 'sonido') Audio3D.alternarSilencio();
+      if (a === 'casa') {
+        return abrirModalAhora('🛏️ ¿Terminar el día?', '<p>Te vas a casa y mañana partes a las 8:00.</p>', [
+          { texto: 'Sí, ir a casa', accion: () => { esperarDia(); Escena3D.volverAlExterior(); } },
+          { texto: 'Seguir', clase: ' ' }]);
+      }
+      if (a === 'abrir' && hay3D) Escena3D.refrescarInterior();
       render();
     };
   });
+  app.querySelectorAll('[data-cajon]').forEach(el => { el.onclick = () => alternarCajon(el.dataset.cajon); });
+  const obj = app.querySelector('.hud-objetivo[data-ir]');
+  if (obj && obj.dataset.ir) obj.onclick = () => Escena3D.irA(obj.dataset.ir);
+  const pr = document.getElementById('hudPrompt');
+  if (pr) pr.onclick = () => Escena3D.interactuar();
   app.querySelectorAll('[data-lugar-abrir]').forEach(el => {
     el.onclick = () => abrirLugar(el.dataset.lugarAbrir);
   });
   app.querySelectorAll('.tramite[data-lugar]').forEach(el => {
     el.onclick = () => {
-      if (hay3D && Escena3D.irA(el.dataset.lugar)) {
-        const escena = document.getElementById('escena3d');
-        if (escena && escena.getBoundingClientRect().top < 0) escena.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else abrirLugar(el.dataset.lugar);
+      if (hay3D && Escena3D.irA(el.dataset.lugar)) { cajon = null; render(); }
+      else abrirLugar(el.dataset.lugar);
     };
   });
   app.querySelectorAll('[data-control]').forEach(el => {
@@ -372,12 +542,17 @@ function enlazarEventosJuego() {
   });
 }
 
-function abrirLugar(id) {
+function abrirLugar(id, hablante) {
   const l = LUGARES[id];
   const tramites = tramitesAplicables().filter(t => t.lugar === id);
   const cerrado = !l.online && esFinDeSemana(fechaActual());
-  let html = `<p class="sub">${l.horario}${cerrado ? ' · <b>Hoy está cerrado</b>: si haces un trámite, esperarás hasta el lunes.' : ''}</p>`;
+  const saludos = ['Buenos días. ¿En qué le puedo ayudar?', 'Siguiente, por favor. ¿Qué trámite necesita?', 'Hola, cuénteme, ¿qué necesita?'];
+  let html = hablante
+    ? `<p class="cita">"${G.hora >= 12 * 60 ? saludos[0].replace('días', 'tardes') : azar(saludos)}"</p>`
+    : `<p class="sub">${horarioLugar(l)}${cerrado ? ' · <b>Hoy está cerrado</b>: si haces un trámite, esperarás hasta el lunes.' : ''}</p>`;
   const botones = [];
+  // Después de un trámite, se termina la atención y sales a la calle
+  const tras = ok => { if (ok && hay3D && hablante) { Escena3D.terminarFila(); Escena3D.salirCuandoTermine('Al día siguiente...'); } };
 
   if (id === 'sii' && G.f29.length) {
     html += `<div class="tramite-detalle disponible"><b>🧾 Declarar y pagar F29</b>
@@ -397,30 +572,30 @@ function abrirLugar(id) {
     if (e === 'disponible') {
       botones.push({
         texto: `Hacer: ${nombreTramite(t)}`,
-        accion: () => t.especial === 'sociedad' ? elegirSociedad() : intentarTramite(t.id),
+        accion: () => t.especial === 'sociedad' ? elegirSociedad(hablante, tras) : tras(intentarTramite(t.id, { hablante })),
       });
     }
   }
-  if (id === 'sii' && !tramites.length && !G.f29.length) html += '<p>No tienes nada pendiente con el SII. 😌</p>';
-  botones.push({ texto: 'Volver', clase: ' ' });
-  abrirModalAhora(`${l.emoji} ${l.nombre}`, html, botones);
+  if (!botones.length) html += hablante ? '<p>No tienes trámites pendientes aquí por ahora. 😌</p>' : '<p>No tienes nada pendiente aquí. 😌</p>';
+  botones.push({ texto: hablante ? 'Nada más, gracias' : 'Volver', clase: ' ' });
+  abrirModalAhora(`${l.emoji} ${l.nombre}`, html, botones, { hablante });
 }
 
-function elegirSociedad() {
+function elegirSociedad(hablante, tras = () => {}) {
   const html = `<p>¿Qué tipo de sociedad quieres crear?</p>
     <div class="sociedades">${Object.entries(SOCIEDADES).map(([id, s]) =>
       `<div class="tramite-detalle"><b>${s.nombre}</b> — ${s.largo}<p>${s.desc}</p></div>`).join('')}</div>`;
   abrirModalAhora('🏗️ Constituir la empresa', html, Object.entries(SOCIEDADES).map(([id, s]) => ({
     texto: `Crear ${s.nombre}`,
-    accion: () => intentarTramite('constitucion', { sociedad: id }),
-  })).concat([{ texto: 'Cancelar', clase: ' ' }]));
+    accion: () => tras(intentarTramite('constitucion', { sociedad: id, hablante })),
+  })).concat([{ texto: 'Cancelar', clase: ' ' }]), { hablante });
 }
 
 function abrirMenu() {
   abrirModalAhora('☰ Menú', `<p>Tu partida se guarda automáticamente en este navegador.</p>`, [
     { texto: 'Seguir jugando' },
     { texto: 'Rendirse y ver resultado', clase: ' ', accion: () => terminar(G.fase === 'operacion' ? 'tiempo' : 'quiebra') },
-    { texto: 'Volver al inicio', clase: ' ', accion: () => { guardar(); G = null; } },
+    { texto: 'Volver al inicio', clase: ' ', accion: () => { guardar(); if (hay3D) Escena3D.volverAlExterior(); cajon = null; G = null; } },
   ]);
 }
 
@@ -458,4 +633,27 @@ function renderFinal() {
 // ------------------------------------------------------------
 //  Arranque
 // ------------------------------------------------------------
+window.addEventListener('keydown', ev => {
+  if (!hay3D || !G || G.fase === 'fin') return;
+  const tag = (ev.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+  if (!modal.classList.contains('oculto')) return;
+  const k = ev.key.toLowerCase();
+  if (k === 't') alternarCajon('tramites');
+  if (k === 'b') alternarCajon('bitacora');
+  if (k === 'n' && G.fase === 'operacion') alternarCajon('negocio');
+  if (k === 'escape' && cajon) alternarCajon(null);
+  if (k === 'm') { Audio3D.alternarSilencio(); render(); }
+});
+
+// Reloj del HUD y letreros (abierto/cerrado) sin redibujar todo
+let ultimaHoraEntera = -1;
+setInterval(() => {
+  if (!hay3D || !G || G.fase === 'fin') return;
+  const el = document.getElementById('hudReloj');
+  if (el) el.textContent = horaTexto(G.hora);
+  const h = Math.floor(G.hora / 30);
+  if (h !== ultimaHoraEntera) { ultimaHoraEntera = h; Escena3D.actualizar(); guardar(); }
+}, 500);
+
 render();

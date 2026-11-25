@@ -81,18 +81,48 @@ const RUBROS = {
 // ------------------------------------------------------------
 //  Lugares del mapa
 // ------------------------------------------------------------
+// abre/cierra en minutos desde las 00:00. fila: hay que sacar número en un tótem.
+// interior: tipo de sala que se ve al entrar. funcionarios: quiénes atienden.
 const LUGARES = {
-  registroCivil:   { nombre: 'Registro Civil', emoji: '🪪', horario: 'Lun a Vie', online: false },
-  registroEmpresas:{ nombre: 'Registro de Empresas (online)', emoji: '🌐', horario: '24/7 (si no se cae)', online: true },
-  sii:             { nombre: 'Servicio de Impuestos Internos', emoji: '🏛️', horario: '24/7 online', online: true },
-  banco:           { nombre: 'Banco', emoji: '🏦', horario: 'Lun a Vie', online: false },
-  corredora:       { nombre: 'Corredora de Propiedades', emoji: '🏠', horario: 'Lun a Vie', online: false },
-  proveedor:       { nombre: 'Proveedor de Equipos', emoji: '📦', horario: 'Lun a Vie', online: false },
-  municipalidad:   { nombre: 'Municipalidad', emoji: '🏢', horario: 'Lun a Vie', online: false },
-  seremi:          { nombre: 'SEREMI de Salud', emoji: '🏥', horario: 'Lun a Vie', online: false },
-  mutual:          { nombre: 'Mutual de Seguridad', emoji: '⛑️', horario: 'Lun a Vie', online: false },
-  fomento:         { nombre: 'Agencia de Fomento', emoji: '🚀', horario: '24/7 online', online: true },
+  registroCivil:   { nombre: 'Registro Civil', emoji: '🪪', online: false, abre: 540, cierra: 840, fila: true,
+                     interior: 'oficina', modulos: 4, pared: 0xe8e2d0, letra: 'A',
+                     funcionarios: ['Sra. Patricia', 'Don Hernán', 'Srta. Javiera', 'Don Luis'] },
+  registroEmpresas:{ nombre: 'Registro de Empresas (online)', emoji: '🌐', online: true, abre: 0, cierra: 1440, fila: false,
+                     interior: 'digital', modulos: 3, pared: 0xdbe9f6, letra: 'D',
+                     funcionarios: ['Asistente virtual', 'Asistente virtual', 'Asistente virtual'] },
+  sii:             { nombre: 'Servicio de Impuestos Internos', emoji: '🏛️', online: true, abre: 0, cierra: 1440, fila: false,
+                     interior: 'digital', modulos: 3, pared: 0xe9e6dc, letra: 'S',
+                     funcionarios: ['Asistente virtual', 'Don Rodrigo (mesa de ayuda)', 'Asistente virtual'] },
+  banco:           { nombre: 'Banco', emoji: '🏦', online: false, abre: 540, cierra: 840, fila: true,
+                     interior: 'banco', modulos: 3, pared: 0xdfe6ea, letra: 'B',
+                     funcionarios: ['Ejecutiva Daniela', 'Ejecutivo Matías', 'Ejecutiva Carolina'] },
+  corredora:       { nombre: 'Corredora de Propiedades', emoji: '🏠', online: false, abre: 540, cierra: 1080, fila: false,
+                     interior: 'privado', modulos: 1, pared: 0xf3e3cf, letra: 'C',
+                     funcionarios: ['Corredor Felipe'] },
+  proveedor:       { nombre: 'Proveedor de Equipos', emoji: '📦', online: false, abre: 540, cierra: 1080, fila: false,
+                     interior: 'bodega', modulos: 1, pared: 0xcfc6bb, letra: 'P',
+                     funcionarios: ['Vendedor Jorge'] },
+  municipalidad:   { nombre: 'Municipalidad', emoji: '🏢', online: false, abre: 510, cierra: 840, fila: true,
+                     interior: 'oficina', modulos: 4, pared: 0xe3ecf7, letra: 'M',
+                     funcionarios: ['Sra. Ximena', 'Don Ramón', 'Srta. Fernanda', 'Don Iván'] },
+  seremi:          { nombre: 'SEREMI de Salud', emoji: '🏥', online: false, abre: 540, cierra: 840, fila: true,
+                     interior: 'oficina', modulos: 3, pared: 0xeef4f1, letra: 'H',
+                     funcionarios: ['Inspectora Gloria', 'Don Arturo', 'Srta. Camila'] },
+  mutual:          { nombre: 'Mutual de Seguridad', emoji: '⛑️', online: false, abre: 510, cierra: 1050, fila: true,
+                     interior: 'oficina', modulos: 2, pared: 0xfff3d6, letra: 'U',
+                     funcionarios: ['Ejecutiva Marcela', 'Ejecutivo Tomás'] },
+  fomento:         { nombre: 'Agencia de Fomento', emoji: '🚀', online: true, abre: 0, cierra: 1440, fila: false,
+                     interior: 'digital', modulos: 2, pared: 0xebe4f7, letra: 'F',
+                     funcionarios: ['Asistente virtual', 'Asesora Valentina'] },
 };
+
+// Texto de horario de un lugar
+function horarioLugar(l) {
+  if (l.online) return 'Online 24/7';
+  const hhmm = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+  return `Lun a Vie ${hhmm(l.abre)}–${hhmm(l.cierra)}`;
+}
+
 
 // ------------------------------------------------------------
 //  Trámites
