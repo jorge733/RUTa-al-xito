@@ -4,6 +4,7 @@
 
 const app = document.getElementById('app');
 const modal = document.getElementById('modal');
+const hay3D = typeof Escena3D !== 'undefined' && Escena3D.init(id => entrarEdificio(id));
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -48,6 +49,7 @@ function render() {
   if (!G) renderInicio();
   else if (G.fase === 'fin') renderFinal();
   else renderJuego();
+  if (hay3D && G && G.fase !== 'fin') Escena3D.actualizar();
   mostrarSiguienteModal();
 }
 
@@ -100,7 +102,7 @@ function renderInicio() {
   </section>`;
 
   const fc = document.getElementById('btnContinuar');
-  if (fc) fc.onclick = () => { if (cargar()) render(); };
+  if (fc) fc.onclick = () => { if (cargar()) { render(); window.scrollTo(0, 0); } };
   const fb = document.getElementById('btnBorrar');
   if (fb) fb.onclick = () => abrirModalAhora('¿Borrar partida?', '<p>Se perderá tu progreso.</p>', [
     { texto: 'Sí, borrar', clase: 'peligro', accion: () => borrarPartida() },
@@ -114,13 +116,15 @@ function renderInicio() {
     encolar('👋 ¡Bienvenido al mundo del emprendimiento!', `
       <p>Hola <b>${esc(G.jugador)}</b>. Para que <b>${esc(G.empresa)}</b> pueda abrir, necesitas completar varios trámites.</p>
       <ul>
-        <li>Haz clic en los <b>lugares del mapa</b> para hacer trámites.</li>
+        <li>Camina por la plaza y <b>entra a los edificios</b> para hacer trámites (clic en el edificio, o WASD + E).</li>
+        <li>El sitio con el letrero <b>"SE ARRIENDA"</b> será tu negocio.</li>
         <li>Algunos trámites <b>requieren otros</b> primero. Revisa la lista de la izquierda.</li>
         <li>Las oficinas presenciales <b>cierran el fin de semana</b>.</li>
         <li>Si te rechazan, pierdes el día y <b>paciencia</b>. Si llega a cero, colapsas.</li>
         <li>Cuando arriendes el local, el <b>arriendo corre</b> todos los meses: ¡no te demores!</li>
       </ul>`, [{ texto: '¡Vamos!' }]);
     render();
+    window.scrollTo(0, 0);
   };
 }
 
@@ -134,12 +138,52 @@ function renderJuego() {
     <div class="layout">
       <aside class="col-izq">${panelTramites()}</aside>
       <section class="col-centro">
+        ${hay3D ? escena() : ''}
         ${G.fase === 'operacion' ? panelOperacion() : panelEspera()}
-        ${mapa()}
+        ${hay3D ? '' : mapa()}
       </section>
       <aside class="col-der">${panelBitacora()}</aside>
     </div>`;
   enlazarEventosJuego();
+  if (hay3D) Escena3D.montar(document.getElementById('escena3d'));
+}
+
+function escena() {
+  return `
+  <div class="tarjeta escena">
+    <div id="escena3d"></div>
+    <div class="escena-ayuda">🖱️ Haz clic en un edificio para ir · <b>WASD</b>/flechas para caminar · <b>E</b> para entrar · rueda para zoom</div>
+  </div>`;
+}
+
+function entrarEdificio(id) {
+  if (!G || G.fase === 'fin' || colaModal.length) return;
+  if (id === 'negocio') infoNegocio();
+  else abrirLugar(id);
+}
+
+function infoNegocio() {
+  const r = rubro();
+  let html, botones = [];
+  if (G.fase === 'operacion') {
+    const s = G.ultimaSemana;
+    html = `<p><b>${esc(G.empresa)}</b> está abierto. ${r.emoji}</p>
+      <ul><li>Trabajadores: ${G.empleados} (+ tú)</li>
+      <li>Precio: ${dinero(precioActual())}</li>
+      <li>Última semana: ${s ? `${s.ventas} ${r.unidad}, ${dinero(s.ingresos)}` : 'aún sin cierre'}</li></ul>`;
+    botones.push({ texto: '⏩ Trabajar una semana', accion: () => avanzarSemana() });
+  } else if (puedeAbrir()) {
+    html = '<p>¡Tienes todos los permisos! ¿Cortamos la cinta?</p>';
+    botones.push({ texto: '🎊 Abrir el negocio', accion: () => abrirNegocio() });
+  } else if (hecho('arriendo')) {
+    html = `<p>Ya tienes el lugar, pero te faltan permisos para abrir:</p>
+      <ul>${tramitesAplicables().filter(t => esObligatorio(t) && !hecho(t.id)).map(t => `<li>${nombreTramite(t)} <small>(${LUGARES[t.lugar].nombre})</small></li>`).join('')}</ul>`;
+  } else {
+    html = `<p>Aquí estará <b>${esc(G.empresa)}</b>. Por ahora es un sitio vacío.</p>
+      <p>Arriéndalo en la <b>Corredora de Propiedades</b> (antes debes constituir la empresa).</p>`;
+  }
+  botones.push({ texto: 'Volver', clase: ' ' });
+  abrirModalAhora(`${r.emoji} Tu negocio`, html, botones);
 }
 
 function barraEstado() {
@@ -312,7 +356,12 @@ function enlazarEventosJuego() {
     el.onclick = () => abrirLugar(el.dataset.lugarAbrir);
   });
   app.querySelectorAll('.tramite[data-lugar]').forEach(el => {
-    el.onclick = () => abrirLugar(el.dataset.lugar);
+    el.onclick = () => {
+      if (hay3D && Escena3D.irA(el.dataset.lugar)) {
+        const escena = document.getElementById('escena3d');
+        if (escena && escena.getBoundingClientRect().top < 0) escena.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else abrirLugar(el.dataset.lugar);
+    };
   });
   app.querySelectorAll('[data-control]').forEach(el => {
     el.oninput = () => {
