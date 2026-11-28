@@ -8,6 +8,14 @@ Un simulador de emprendimiento en el que creas tu propia empresa en Chile: elige
 
 No necesita instalación. Abre `index.html` en el navegador, o publícalo con **GitHub Pages** (Settings → Pages → Branch `main` / root).
 
+### Instalarla como app (PWA)
+Publicada en GitHub Pages (o cualquier sitio con HTTPS), se puede **instalar** en el celular o el computador y funciona **sin conexión**:
+
+- **Android / Chrome / Edge:** botón **📲 Instalar la app** en la pantalla de inicio del juego (o "Instalar app" en el menú del navegador).
+- **iPhone / iPad:** en Safari, **Compartir → Agregar a pantalla de inicio** (el botón del juego muestra estos pasos).
+
+Se abre a pantalla completa con su propio ícono. Si cambias archivos del juego, sube `VERSION` en `sw.js` para que los jugadores reciban la actualización.
+
 ### Un mundo inmersivo en 3D
 El juego ocurre a pantalla completa en una plaza de una ciudad chilena, con la cordillera al fondo.
 - **Tercera persona:** caminas con **WASD** (Shift para correr), haces **clic** donde quieres ir y **arrastras** el mouse para mirar. **Q/R** giran la cámara y la rueda hace zoom.
@@ -36,10 +44,12 @@ La partida se guarda automáticamente en el navegador.
 
 ```
 index.html        Página principal
+manifest.webmanifest, sw.js, icons/   App instalable: manifiesto, caché sin conexión e íconos
 css/styles.css    Estilos
 js/data.js        Datos: rubros, lugares, trámites, sociedades, eventos
 js/game.js        Lógica: tiempo, trámites, ventas, impuestos, final
 js/ui.js          Interfaz y pantallas
+js/pwa.js         Registro del service worker y botón "Instalar la app"
 js/audio.js       Sonido procedural (Web Audio) y voces
 js/3d/base.js     Texturas procedurales, materiales y modelos (personas, árboles, autos)
 js/3d/exterior.js Plaza, edificios, ciudad, cordillera, cielo y ciclo día/noche

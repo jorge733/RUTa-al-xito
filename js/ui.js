@@ -146,6 +146,7 @@ function renderInicio() {
         pagando arriendo, sueldos e impuestos. ¿Llegarás a ser un magnate… o te quedarás en la fila del banco?</p>
       ${guardada ? `<div class="continuar"><button class="btn primario grande" id="btnContinuar">▶ Continuar partida</button>
         <button class="btn" id="btnBorrar">Borrar partida guardada</button></div>` : ''}
+      <div class="continuar" id="zonaInstalar"></div>
     </div>
 
     <form id="formInicio" class="tarjeta form-inicio">
@@ -180,6 +181,7 @@ function renderInicio() {
     <p class="nota">Los montos y plazos son aproximados y simplificados para el juego.</p>
   </section>`;
 
+  if (typeof PWA !== 'undefined') PWA.pintar();
   const fc = document.getElementById('btnContinuar');
   if (fc) fc.onclick = () => { if (cargar()) { render(); window.scrollTo(0, 0); } };
   const fb = document.getElementById('btnBorrar');

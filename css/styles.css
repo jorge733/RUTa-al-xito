@@ -470,3 +470,8 @@ body.tactil .modal-caja { overscroll-behavior: contain; touch-action: pan-y; }
 .modal.dialogo .modal-cuerpo { overflow: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
 .modal.dialogo .modal-caja > h2 { flex: none; }
 .modal.dialogo .modal-acciones { flex: none; }
+
+/* Botón "Instalar la app" */
+#zonaInstalar:empty { display: none; }
+.btn.instalar { background: var(--amarillo); border-color: var(--amarillo); color: #2a2100; }
+.btn.instalar:hover:not(:disabled) { background: #ffc52e; }
