@@ -1,6 +1,6 @@
 // RUTa al Éxito — Service worker: deja el juego disponible sin conexión.
 // Al cambiar cualquier archivo del juego, sube VERSION para que los jugadores reciban la actualización.
-const VERSION = 'ruta-v2';
+const VERSION = 'ruta-v3';
 const ARCHIVOS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ARCHIVOS = [
   './js/vendor/three.min.js',
   './js/data.js',
   './js/game.js',
+  './js/procesos.js',
   './js/audio.js',
   './js/3d/base.js',
   './js/3d/exterior.js',

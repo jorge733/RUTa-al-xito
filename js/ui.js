@@ -83,12 +83,12 @@ function mostrarSiguienteModal() {
     if (dialogo && typeof Audio3D !== 'undefined') {
       const tmp = document.createElement('div');
       tmp.innerHTML = m.voz || m.html;
-      const primero = tmp.querySelector('.cita, p');
+      const primero = tmp.querySelector(m.proceso ? '.cita' : '.cita, p');
       if (primero) Audio3D.hablar(primero.textContent.slice(0, 220));
     }
   }
   modal.innerHTML = `
-    <div class="modal-caja" role="dialog" aria-modal="true">
+    <div class="modal-caja ${m.proceso ? 'proceso' : ''}" role="dialog" aria-modal="true">
       ${dialogo ? `<div class="hablante">🗣️ ${esc(m.hablante)}</div>` : ''}
       <h2>${m.titulo}</h2>
       <div class="modal-cuerpo">${m.html}</div>
@@ -105,7 +105,15 @@ function mostrarSiguienteModal() {
       render();
     };
   });
-  const primero = modal.querySelector('button:not([disabled])');
+  if (m.alMostrar) m.alMostrar();
+  // Enter en un campo = botón principal
+  modal.querySelectorAll('input:not([type=checkbox]):not([type=radio]), select').forEach(el => {
+    el.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); const b = modal.querySelector('[data-boton="0"]'); if (b) b.click(); }
+    });
+  });
+  const campo = !esTactil && modal.querySelector('.formulario input:not([type=checkbox]):not([type=radio]), .formulario select, .formulario textarea');
+  const primero = campo || modal.querySelector('button:not([disabled])');
   if (primero) primero.focus();
 }
 
@@ -229,7 +237,8 @@ function renderInicio() {
         <li>Entra a los edificios y habla con los funcionarios (<b>E</b>).`} En las oficinas públicas primero <b>saca número</b> en el tótem.</li>
         <li>El haz de luz amarilla marca tu <b>próximo paso</b>. El sitio con el letrero <b>"SE ARRIENDA"</b> será tu negocio.</li>
         <li>Las oficinas públicas atienden de <b>lunes a viernes, de 9:00 a 14:00</b>. A las 21:00 te vas a casa.</li>
-        <li>Si te rechazan, pierdes el día y <b>paciencia</b>. Si llega a cero, colapsas.</li>
+        <li>Cada trámite es <b>real</b>: entregas documentos, llenas formularios, creas tu <b>Clave Única</b> y la usas para entrar a los trámites online y firmar. ¡Anótala! Tus datos están en 🗂️ <b>Mis documentos</b>.</li>
+        <li>Si te falta un documento o te rechazan, pierdes el día y <b>paciencia</b>. Si llega a cero, colapsas.</li>
         <li>Cuando arriendes el local, el <b>arriendo corre</b> todos los meses: ¡no te demores!</li>
         ${esTactil ? '<li>Toca la <b>barra amarilla</b> para ir caminando solo al próximo trámite.</li>' : '<li><b>T</b> trámites · <b>B</b> bitácora · <b>M</b> sonido.</li>'}
       </ul>`, [{ texto: '¡Vamos!' }]);
@@ -264,8 +273,9 @@ function renderJuego3D() {
   const pac = clamp(G.paciencia, 0, 100);
   const obj = objetivoActual();
   const enNegocio = Escena3D.lugarActual === 'negocio';
-  const titulosCajon = { tramites: '📋 Trámites', negocio: `📊 ${esc(G.empresa)}`, bitacora: '📰 Bitácora' };
-  const contenidoCajon = cajon === 'tramites' ? panelTramites() : cajon === 'negocio' ? (G.fase === 'operacion' ? panelOperacion() : '') : cajon === 'bitacora' ? panelBitacora() : '';
+  const titulosCajon = { tramites: '📋 Trámites', negocio: `📊 ${esc(G.empresa)}`, bitacora: '📰 Bitácora', documentos: '🗂️ Mis documentos' };
+  const contenidoCajon = cajon === 'tramites' ? panelTramites() : cajon === 'negocio' ? (G.fase === 'operacion' ? panelOperacion() : '')
+    : cajon === 'bitacora' ? panelBitacora() : cajon === 'documentos' ? panelDocumentos() : '';
   app.innerHTML = `
   <div class="juego3d">
     <div id="escena3d" class="lienzo"></div>
@@ -281,6 +291,7 @@ function renderJuego3D() {
     <div class="hud-botones">
       <button class="hud-btn ${cajon === 'tramites' ? 'activo' : ''}" data-cajon="tramites" title="Trámites (T)">📋<span>Trámites</span></button>
       ${G.fase === 'operacion' ? `<button class="hud-btn ${cajon === 'negocio' ? 'activo' : ''}" data-cajon="negocio" title="Mi negocio (N)">📊<span>Negocio</span></button>` : ''}
+      <button class="hud-btn ${cajon === 'documentos' ? 'activo' : ''}" data-cajon="documentos" title="Mis documentos (I)">🗂️<span>Documentos</span></button>
       <button class="hud-btn ${cajon === 'bitacora' ? 'activo' : ''}" data-cajon="bitacora" title="Bitácora (B)">📰<span>Bitácora</span></button>
       <button class="hud-btn" data-accion="casa" title="Terminar el día">🛏️<span>Ir a casa</span></button>
       <button class="hud-btn" data-accion="sonido" title="Sonido (M)">${typeof Audio3D !== 'undefined' && Audio3D.silencio ? '🔇' : '🔊'}<span>Sonido</span></button>
@@ -672,7 +683,10 @@ function abrirLugar(id, hablante) {
     if (e === 'disponible') {
       botones.push({
         texto: `Hacer: ${nombreTramite(t)}`,
-        accion: () => t.especial === 'sociedad' ? elegirSociedad(hablante, tras) : tras(intentarTramite(t.id, { hablante })),
+        accion: () => iniciarProceso(t, hablante, {
+          alTerminar: opciones => tras(intentarTramite(t.id, { hablante, ...opciones })),
+          alRechazar: () => tras(true),
+        }),
       });
     }
   }
@@ -681,15 +695,6 @@ function abrirLugar(id, hablante) {
   abrirModalAhora(`${l.emoji} ${l.nombre}`, html, botones, { hablante });
 }
 
-function elegirSociedad(hablante, tras = () => {}) {
-  const html = `<p>¿Qué tipo de sociedad quieres crear?</p>
-    <div class="sociedades">${Object.entries(SOCIEDADES).map(([id, s]) =>
-      `<div class="tramite-detalle"><b>${s.nombre}</b> — ${s.largo}<p>${s.desc}</p></div>`).join('')}</div>`;
-  abrirModalAhora('🏗️ Constituir la empresa', html, Object.entries(SOCIEDADES).map(([id, s]) => ({
-    texto: `Crear ${s.nombre}`,
-    accion: () => tras(intentarTramite('constitucion', { sociedad: id, hablante })),
-  })).concat([{ texto: 'Cancelar', clase: ' ' }]), { hablante });
-}
 
 function abrirMenu() {
   abrirModalAhora('☰ Menú', `<p>Tu partida se guarda automáticamente en este navegador.</p>`, [
@@ -741,6 +746,7 @@ window.addEventListener('keydown', ev => {
   const k = ev.key.toLowerCase();
   if (k === 't') alternarCajon('tramites');
   if (k === 'b') alternarCajon('bitacora');
+  if (k === 'i') alternarCajon('documentos');
   if (k === 'n' && G.fase === 'operacion') alternarCajon('negocio');
   if (k === 'escape' && cajon) alternarCajon(null);
   if (k === 'm') { Audio3D.alternarSilencio(); render(); }

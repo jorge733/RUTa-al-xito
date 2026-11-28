@@ -51,9 +51,10 @@ function lugarAbierto(id) {
   return h >= l.abre && h < l.cierra;
 }
 
-// Genera un RUT válido (con dígito verificador módulo 11)
-function generarRut() {
-  const cuerpo = 76000000 + Math.floor(Math.random() * 2999999);
+// Genera un RUT válido (con dígito verificador módulo 11).
+// Por defecto, uno de empresa (76-78 millones); con otros límites, uno de persona.
+function generarRut(desde = 76000000, rango = 2999999) {
+  const cuerpo = desde + Math.floor(Math.random() * rango);
   let suma = 0, mult = 2;
   for (const c of String(cuerpo).split('').reverse()) {
     suma += Number(c) * mult;
@@ -175,7 +176,7 @@ function intentarTramite(id, opciones = {}) {
 
   // ¿Rechazo?
   const intentos = G.intentos[id] || 0;
-  const prob = t.rechazo * Math.pow(0.5, intentos);
+  const prob = t.rechazo * Math.pow(0.5, intentos) * (opciones.procesoCompleto ? 0.35 : 1);
   if (Math.random() < prob) {
     G.intentos[id] = intentos + 1;
     G.ausente = false;
@@ -195,7 +196,8 @@ function intentarTramite(id, opciones = {}) {
   if (costo > 0) {
     G.caja -= costo;
     // Solo las compras afectas a IVA generan crédito fiscal
-    if (t.id === 'equipamiento' || t.id === 'pasarela') G.iva.credito += costo * IVA / (1 + IVA);
+    // (si pediste boleta en vez de factura, pierdes el crédito fiscal)
+    if ((t.id === 'equipamiento' && !opciones.sinFactura) || t.id === 'pasarela') G.iva.credito += costo * IVA / (1 + IVA);
   }
   for (let i = 1; i < t.dias; i++) avanzarDia();
   G.ausente = false;
@@ -203,6 +205,7 @@ function intentarTramite(id, opciones = {}) {
 
   let html = `<p>${nombreTramite(t)}: <b>¡listo!</b></p>`;
   if (costo > 0) html += `<p>Pagaste ${dinero(costo)}.</p>`;
+  if (opciones.sinFactura) html += '<p>⚠️ Pediste boleta: el IVA de esta compra <b>no</b> te sirve como crédito fiscal.</p>';
   html += efectoEspecial(t, opciones);
   log(`Trámite completado: ${nombreTramite(t)}${costo ? ' (' + dinero(costo) + ')' : ''}.`, 'bueno');
   encolar(`✅ ${lugar.nombre}`, html, null, { hablante: opciones.hablante, sonido: 'exito' });
@@ -216,7 +219,29 @@ function intentarTramite(id, opciones = {}) {
   return true;
 }
 
+// Rechazo causado por un error del jugador durante el proceso (le faltó un documento, etc.)
+function rechazarTramite(id, motivo, opciones = {}) {
+  const t = tramite(id);
+  const lugar = LUGARES[t.lugar];
+  G.ausente = true;
+  avanzarDia();
+  G.ausente = false;
+  G.intentos[id] = (G.intentos[id] || 0) + 1;
+  G.paciencia -= 15;
+  log(`Rechazado en ${lugar.nombre}: "${motivo}"`, 'malo');
+  let html = `<p class="cita">"${motivo}"</p><p>Perdiste el día y algo de paciencia. Revisa bien qué te piden antes de volver.</p>`;
+  if (G.paciencia <= 0) html += colapso();
+  encolar(`🙅 ${lugar.nombre}: vuelva mañana`, html, null, { hablante: opciones.hablante, sonido: 'rechazo' });
+  guardar();
+  return true;
+}
+
 function efectoEspecial(t, opciones) {
+  if (t.id === 'arriendo' && opciones.local) G.local = opciones.local;
+  if (t.id === 'cuentaBanco') {
+    G.cuentaNumero = String(Math.floor(10000000 + Math.random() * 89999999)).replace(/(\d{2})(\d{6})/, '$1-$2-') + Math.floor(Math.random() * 10);
+    return `<p>Tu cuenta corriente es la <b>N° ${G.cuentaNumero}</b>. La tarjeta llega en 5 días hábiles.</p>`;
+  }
   if (t.id === 'inicioActividades') {
     G.rut = generarRut();
     return `<p>El RUT de tu empresa es <b>${G.rut}</b>. ¡Ya existe para el SII!</p>`;

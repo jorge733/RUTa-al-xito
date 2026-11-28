@@ -642,3 +642,94 @@ body:has(.final) { background: linear-gradient(180deg, #0b3d91 0, #0b3d91 260px,
   .hud-chip .barrita { width: auto; }
   .hud-fila { bottom: calc(252px + env(safe-area-inset-bottom)); }
 }
+
+/* =========================================================
+   Procesos de trámites (formularios paso a paso)
+   ========================================================= */
+.modal-caja.proceso { width: min(600px, 100%); }
+.pasos-progreso { display: flex; align-items: center; gap: 4px; margin-bottom: .9em; }
+.pasos-progreso i { flex: 1; max-width: 46px; height: 6px; border-radius: 4px; background: #e2e6ef; }
+.pasos-progreso i.hecho { background: var(--verde); }
+.pasos-progreso i.actual { background: var(--azul); }
+.pasos-progreso span { margin-left: auto; font-size: .75rem; color: var(--suave); white-space: nowrap; padding-left: .5em; }
+.error-paso {
+  background: #fdecea; color: #8c1d13; border-left: 4px solid var(--rojo); padding: .6em .8em; border-radius: 8px;
+  font-size: .92rem; animation: sacudir .35s;
+}
+@keyframes sacudir { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.ayuda { font-size: .86rem; color: var(--suave); background: #f6f8fc; padding: .5em .7em; border-radius: 8px; }
+
+.formulario { display: flex; flex-direction: column; gap: .8em; margin-top: .6em; }
+.campo { display: flex; flex-direction: column; gap: .3em; border: 0; padding: 0; margin: 0; min-width: 0; }
+.campo-etiqueta, .campo legend { font-size: .86rem; font-weight: 700; padding: 0; margin-bottom: .3em; }
+.campo input, .campo select, .campo textarea {
+  width: 100%; margin: 0; padding: .7em .8em; border: 2px solid var(--borde); border-radius: 10px;
+  font: inherit; font-size: 1rem; background: #fff; color: var(--texto);
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus { outline: none; border-color: var(--azul); }
+.campo textarea { resize: vertical; min-height: 90px; }
+.opciones { gap: .45em; }
+.opcion {
+  display: flex; align-items: flex-start; gap: .65em; padding: .65em .8em; border: 2px solid var(--borde);
+  border-radius: 10px; cursor: pointer; font-weight: 400; background: #fff; transition: border-color .12s, background .12s;
+}
+.opcion:hover { background: #f7f9ff; }
+.opcion:has(input:checked) { border-color: var(--azul); background: var(--azul-claro); }
+.opcion input { margin: .2em 0 0; width: 1.1em; height: 1.1em; accent-color: var(--azul); flex: none; }
+.opcion span { display: flex; flex-direction: column; font-size: .93rem; }
+.opcion small { font-size: .8rem; }
+.opcion.unica span { display: block; }
+
+/* Cédula de identidad */
+.cedula {
+  max-width: 360px; margin: .6em auto; border-radius: 14px; overflow: hidden; font-size: .82rem;
+  background: linear-gradient(135deg, #e9f1fb, #d4e3f6 60%, #f3e9f2); border: 1px solid #b8c9e2;
+  box-shadow: 0 6px 18px rgba(10, 30, 80, .15);
+}
+.cedula-cab { background: #0b3d91; color: #fff; padding: .4em .8em; font-weight: 800; font-size: .7rem; letter-spacing: .06em; display: flex; justify-content: space-between; }
+.cedula-cab span { font-weight: 400; opacity: .85; }
+.cedula-cuerpo { display: flex; gap: .8em; padding: .7em .8em; align-items: center; }
+.cedula-foto { width: 64px; height: 80px; flex: none; border-radius: 8px; background: #c9d6ea; display: grid; place-items: center; font-size: 2.2rem; }
+.cedula dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .1em .6em; }
+.cedula dt { color: #5a6a86; font-size: .7rem; text-transform: uppercase; align-self: center; }
+.cedula dd { margin: 0; font-weight: 700; color: #16233f; }
+.cedula-run { font-size: 1.05rem; letter-spacing: .02em; }
+.ver-cedula { margin: .4em 0; font-size: .9rem; }
+.ver-cedula summary { cursor: pointer; color: var(--azul); font-weight: 700; }
+
+/* Correo simulado */
+.correo-simulado { border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: var(--sombra); }
+.correo-cab { background: #f1f3f8; padding: .5em .8em; font-size: .8rem; color: var(--suave); }
+.correo-msg { padding: .8em 1em; font-size: .9rem; }
+.correo-msg p { margin: .4em 0; }
+.correo-codigo { font: 800 1.9rem ui-monospace, Menlo, monospace; letter-spacing: .25em; color: var(--azul); margin: .2em 0; }
+
+.reglas { margin: .4em 0; font-size: .9rem; }
+.aviso-clave { font-size: .84rem; background: #fff4e5; padding: .5em .7em; border-radius: 8px; }
+.web-cab { background: #f1f3f8; border: 1px solid var(--borde); border-radius: 10px; padding: .55em .8em; font-size: .88rem; }
+.web-cab span { color: var(--suave); font-size: .78rem; }
+
+/* Documentos, boletas y firma */
+.documento-firma {
+  background: #fffdf6; border: 1px solid #e6dcc0; border-radius: 10px; padding: .8em 1em; font-size: .88rem;
+  box-shadow: inset 0 0 0 4px #fffaf0; margin-bottom: .6em;
+}
+.documento-firma p { margin: .4em 0 0; }
+.boleta { display: flex; justify-content: space-between; align-items: center; gap: 1em; background: #f6f8fc; border: 1px dashed #b9c3d6; border-radius: 10px; padding: .7em 1em; margin: .5em 0; }
+.boleta b { font-size: 1.2rem; color: var(--azul); white-space: nowrap; }
+.firma-zona { border: 2px dashed #b9c3d6; border-radius: 12px; background: #fff; overflow: hidden; }
+#firmaCanvas { display: block; width: 100%; height: 150px; touch-action: none; cursor: crosshair;
+  background: linear-gradient(transparent 76%, #dfe4ee 76%, #dfe4ee 77%, transparent 77%); }
+.firma-pie { display: flex; justify-content: space-between; align-items: center; padding: .4em .7em; background: #f6f8fc; font-size: .8rem; color: var(--suave); }
+
+.modal-acciones .btn.abandonar { background: none; border-color: transparent; color: var(--suave); font-weight: 600; }
+.modal-acciones .btn.abandonar:hover { color: var(--rojo); background: #fdecea; }
+.modal.dialogo .modal-caja.proceso { max-height: 92dvh; }
+
+/* Mis documentos */
+.datos { display: flex; flex-direction: column; gap: .35em; margin: 1em 0 .4em; }
+.dato { display: flex; justify-content: space-between; gap: 1em; padding: .45em .2em; border-bottom: 1px solid var(--borde); font-size: .9rem; }
+.dato span { color: var(--suave); }
+.dato b { text-align: right; word-break: break-word; }
+.lista-docs { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .4em; }
+.lista-docs li { background: #f1f4fa; padding: .3em .65em; border-radius: 20px; font-size: .84rem; }

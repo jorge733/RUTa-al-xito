@@ -24,11 +24,17 @@ El juego ocurre a pantalla completa en una plaza de una ciudad chilena, con la c
 - **Reloj y día/noche:** el tiempo corre (1 segundo = 2 minutos). Las oficinas públicas atienden de **lunes a viernes de 9:00 a 14:00**. Si llegas tarde o se acaba el horario mientras esperas, vuelves mañana. Al atardecer se encienden los faroles y las ventanas, y a las 21:00 te vas a casa.
 - **Sonido y voces:** ambiente de ciudad y de oficina, pasos, el "ding" de la pantalla de números y voces sintetizadas para los funcionarios (con el navegador). **M** silencia.
 - **Tu negocio:** primero es un sitio con un letrero de "SE ARRIENDA". Cuando lo arriendas aparece el local, y al abrir se encienden las luces, tus trabajadores atienden y llegan clientes. Se gestiona desde la caja del local.
-- **HUD:** el haz de luz amarilla marca tu próximo paso. **T** trámites, **N** negocio, **B** bitácora.
+- **HUD:** el haz de luz amarilla marca tu próximo paso. **T** trámites, **I** mis documentos, **N** negocio, **B** bitácora.
 
 ### Fase 1: la burocracia
 - Elige entre 6 rubros: ☕ cafetería, 🥖 panadería, 🔧 taller mecánico, 💻 agencia de software, 🚚 food truck y 🛍️ tienda online.
 - Recorre la ciudad (Registro Civil, SII, banco, municipalidad, SEREMI de Salud…) para hacer los trámites: Clave Única, constitución de la sociedad (EIRL, SpA o Ltda.), RUT e inicio de actividades, cuenta bancaria, arriendo, zonificación, resolución sanitaria, patente municipal y otros.
+- **Cada trámite se hace como en la vida real**, paso a paso:
+  - 🪪 **Clave Única:** entregas tu cédula, confirmas tu RUN, das tu correo, escribes el código de activación que te llega y **creas tu clave** (8 caracteres, mayúscula, minúscula y número).
+  - 🌐 **Trámites online** (constitución, SII, fondo): **inicias sesión con tu RUN y tu Clave Única**. Tres intentos fallidos la bloquean y tienes que recuperarla con un código. La constitución se **firma con la Clave Única**.
+  - Llenas los formularios de verdad: razón social (que termine en SpA, Ltda. o E.I.R.L.), objeto social, actividad económica, categoría tributaria, domicilio…
+  - En el banco, la corredora o la municipalidad **eliges qué documentos entregar** (si falta uno, vuelves mañana), **firmas a mano** con el dedo o el mouse, creas la clave de tu tarjeta, transfieres el monto exacto del arriendo y eliges **boleta o factura** (con factura recuperas el IVA).
+  - Tus datos (cédula, RUT de la empresa, cuenta corriente, dirección del local) quedan en **🗂️ Mis documentos**. Las claves son del juego: no uses claves reales.
 - Hay trámites que dependen de otros, oficinas que cierran el fin de semana y rechazos del tipo *"le falta una fotocopia"*. Cada rechazo te cuesta **paciencia**.
 - Desde que arriendas el local, el arriendo se cobra todos los meses, así que conviene no demorarse.
 
@@ -48,6 +54,7 @@ manifest.webmanifest, sw.js, icons/   App instalable: manifiesto, caché sin con
 css/styles.css    Estilos
 js/data.js        Datos: rubros, lugares, trámites, sociedades, eventos
 js/game.js        Lógica: tiempo, trámites, ventas, impuestos, final
+js/procesos.js    Procesos paso a paso de cada trámite (formularios, Clave Única, firmas, documentos)
 js/ui.js          Interfaz y pantallas
 js/pwa.js         Registro del service worker y botón "Instalar la app"
 js/audio.js       Sonido procedural (Web Audio) y voces
