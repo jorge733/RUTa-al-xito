@@ -11,6 +11,7 @@ No necesita instalación. Abre `index.html` en el navegador, o publícalo con **
 ### Un mundo inmersivo en 3D
 El juego ocurre a pantalla completa en una plaza de una ciudad chilena, con la cordillera al fondo.
 - **Tercera persona:** caminas con **WASD** (Shift para correr), haces **clic** donde quieres ir y **arrastras** el mouse para mirar. **Q/R** giran la cámara y la rueda hace zoom.
+- **En el celular:** un **joystick** abajo a la izquierda para caminar (empújalo hasta el borde para correr), **toca** donde quieras ir, **desliza** para mirar y **pellizca** para acercar. El botón azul de la derecha sirve para entrar, hablar e interactuar. Funciona en vertical y en horizontal.
 - **Edificios por dentro:** entras al Registro Civil, al SII, al banco, a la municipalidad… En las oficinas públicas **sacas número en el tótem**, esperas a que la pantalla te llame ("A-68, módulo 2") y **hablas con el funcionario** en el módulo que te toca.
 - **Reloj y día/noche:** el tiempo corre (1 segundo = 2 minutos). Las oficinas públicas atienden de **lunes a viernes de 9:00 a 14:00**. Si llegas tarde o se acaba el horario mientras esperas, vuelves mañana. Al atardecer se encienden los faroles y las ventanas, y a las 21:00 te vas a casa.
 - **Sonido y voces:** ambiente de ciudad y de oficina, pasos, el "ding" de la pantalla de números y voces sintetizadas para los funcionarios (con el navegador). **M** silencia.

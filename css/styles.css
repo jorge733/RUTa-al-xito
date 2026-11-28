@@ -165,7 +165,7 @@ input:focus { outline: 2px solid var(--azul); outline-offset: 1px; }
   position: absolute; top: -8px; right: -8px;
   background: var(--rojo); color: #fff; font-size: .78rem; font-weight: 700;
   min-width: 24px; height: 24px; border-radius: 12px; display: grid; place-items: center;
-  animation: latido 1.6s infinite;
+  animation: pulsoAccion 1.8s infinite;
 }
 @keyframes latido { 50% { transform: scale(1.15); } }
 
@@ -376,3 +376,97 @@ kbd {
   .toasts { bottom: auto; top: 150px; }
 }
 #escena3d.lienzo { position: absolute; inset: 0; height: auto; background: #0d1320; }
+
+/* =========================================================
+   Controles táctiles (celular / tablet)
+   ========================================================= */
+html { -webkit-text-size-adjust: 100%; }
+body.modo-3d { overscroll-behavior: none; touch-action: none; }
+.juego3d button, .joystick { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.toque { font-size: 1.15em; margin-right: .2em; }
+
+.joystick {
+  display: none; position: fixed; z-index: 7;
+  left: calc(18px + env(safe-area-inset-left)); bottom: calc(22px + env(safe-area-inset-bottom));
+  width: 128px; height: 128px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.10) 0 55%, rgba(255,255,255,.18) 56% 100%);
+  border: 2px solid rgba(255,255,255,.35); box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.joystick-palanca {
+  position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
+  background: rgba(255,255,255,.85); box-shadow: 0 3px 10px rgba(0,0,0,.35); pointer-events: none;
+}
+.joystick.activo { background: radial-gradient(circle, rgba(255,255,255,.16) 0 55%, rgba(255,255,255,.26) 56% 100%); }
+.joystick:not(.activo) .joystick-palanca { transition: transform .12s ease-out; }
+body.tactil.modo-3d .joystick { display: block; }
+body.cajon-abierto .joystick, .modal:not(.oculto) ~ .joystick { display: none !important; }
+
+/* Interfaz más cómoda para dedos */
+body.tactil .hud-btn { min-width: 46px; min-height: 46px; justify-content: center; }
+body.tactil .hud-prompt {
+  left: auto; right: calc(16px + env(safe-area-inset-right)); transform: none;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  max-width: calc(100% - 190px); white-space: normal; text-align: left; line-height: 1.25;
+  padding: .85em 1.15em; font-size: 1rem; border-radius: 18px;
+  background: rgba(11, 61, 145, .92); border-color: rgba(255,255,255,.35);
+  animation: pulsoAccion 1.8s infinite;
+}
+body.tactil .hud-ayuda { bottom: calc(6px + env(safe-area-inset-bottom)); }
+body.tactil .cajon-cuerpo { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+body.tactil .modal-caja { overscroll-behavior: contain; touch-action: pan-y; }
+.modal-caja { max-height: 90dvh; }
+
+/* Márgenes seguros (notch) */
+.hud-arriba { top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); }
+.hud-botones { top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); }
+.cajon { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+
+/* Celular vertical */
+@media (max-width: 760px) {
+  .hud-botones { left: calc(12px + env(safe-area-inset-left)); }
+  .hud-arriba { top: calc(68px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); right: 12px; }
+  .hud-arriba { gap: 5px; }
+  .hud-chip { min-width: 0; flex: 1 1 auto; padding: .28em .5em; border-radius: 10px; white-space: nowrap; }
+  .hud-chip small { font-size: .64rem; }
+  .hud-chip b { font-size: .86rem; }
+  .hud-chip.reloj b { font-size: 1.02rem; }
+  .hud-chip .barrita { width: auto; min-width: 46px; height: 7px; }
+  .hud-objetivo { top: auto; bottom: calc(172px + env(safe-area-inset-bottom)); left: 12px; right: 12px; max-width: none; font-size: .84rem; }
+  .hud-fila { top: auto; bottom: calc(222px + env(safe-area-inset-bottom)); left: 12px; right: 12px; font-size: .85rem; }
+  body:not(.tactil) .hud-prompt { bottom: 24px; }
+  .toasts { top: calc(150px + env(safe-area-inset-top)); left: 12px; right: 12px; bottom: auto; align-items: stretch; }
+  .toast { max-width: none; }
+}
+
+/* Celular horizontal (poca altura) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hud-arriba { top: calc(8px + env(safe-area-inset-top)); right: 290px; gap: 5px; }
+  .hud-chip { min-width: 0; padding: .25em .55em; }
+  .hud-chip small { font-size: .64rem; }
+  .hud-chip b { font-size: .88rem; }
+  .hud-chip.reloj b { font-size: 1.05rem; }
+  .hud-chip .barrita { width: 64px; height: 7px; }
+  .hud-botones { top: calc(8px + env(safe-area-inset-top)); max-width: 280px; gap: 5px; }
+  .hud-btn { flex-direction: row; min-width: 0; padding: .35em .5em; font-size: 1.05rem; }
+  .hud-btn span { display: none; }
+  .hud-objetivo { top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: 40%; font-size: .78rem; padding: .35em .7em; }
+  .hud-fila { top: 62px; left: calc(12px + env(safe-area-inset-left)); font-size: .82rem; padding: .35em .6em; }
+  .hud-ayuda { display: none; }
+  .joystick { width: 112px; height: 112px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .joystick-palanca { width: 50px; height: 50px; margin: -25px 0 0 -25px; }
+  body.tactil .hud-prompt { bottom: calc(18px + env(safe-area-inset-bottom)); max-width: 28%; font-size: .9rem; padding: .7em 1em; }
+  .toasts { top: 64px; bottom: auto; right: 12px; }
+  .toast { max-width: 300px; font-size: .8rem; }
+  .modal { padding: 8px; }
+  .modal-caja { max-height: calc(100dvh - 16px); padding: 1em 1.2em; }
+  .modal.dialogo .modal-caja { width: min(640px, 100%); margin-bottom: 4px; }
+  .cajon { width: min(420px, 70%); }
+}
+@keyframes pulsoAccion { 50% { box-shadow: 0 0 0 6px rgba(255,210,74,.45), 0 6px 20px rgba(0,0,0,.3); } }
+
+/* Diálogos: el nombre de quien habla no se recorta y el texto largo se desplaza */
+.modal.dialogo .modal-caja { overflow: visible; display: flex; flex-direction: column; max-height: 85dvh; }
+.modal.dialogo .modal-cuerpo { overflow: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
+.modal.dialogo .modal-caja > h2 { flex: none; }
+.modal.dialogo .modal-acciones { flex: none; }

@@ -14,6 +14,57 @@ const hay3D = typeof Escena3D !== 'undefined' && Escena3D.init({
   onCambioModo: () => { if (G && G.fase !== 'fin') render(); },
 });
 
+// ------------------------------------------------------------
+//  Controles táctiles (celular / tablet)
+// ------------------------------------------------------------
+const esTactil = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+if (esTactil) document.body.classList.add('tactil');
+
+function crearJoystick() {
+  const base = document.createElement('div');
+  base.id = 'joystick';
+  base.className = 'joystick';
+  base.innerHTML = '<div class="joystick-palanca"></div>';
+  document.body.appendChild(base);
+  const palanca = base.firstChild;
+  let id = null, cx = 0, cy = 0, radio = 1;
+  const soltar = () => {
+    id = null;
+    palanca.style.transform = '';
+    base.classList.remove('activo');
+    if (hay3D) Escena3D.setJoystick(0, 0);
+  };
+  const mover = ev => {
+    let dx = ev.clientX - cx, dy = ev.clientY - cy;
+    const d = Math.hypot(dx, dy);
+    if (d > radio) { dx *= radio / d; dy *= radio / d; }
+    palanca.style.transform = `translate(${dx}px, ${dy}px)`;
+    if (hay3D) Escena3D.setJoystick(dx / radio, dy / radio);
+  };
+  base.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    if (id !== null) return;
+    id = ev.pointerId;
+    base.setPointerCapture(id);
+    const r = base.getBoundingClientRect();
+    cx = r.left + r.width / 2; cy = r.top + r.height / 2; radio = r.width * 0.38;
+    base.classList.add('activo');
+    mover(ev);
+  });
+  base.addEventListener('pointermove', ev => { if (ev.pointerId === id) mover(ev); });
+  base.addEventListener('pointerup', ev => { if (ev.pointerId === id) soltar(); });
+  base.addEventListener('pointercancel', ev => { if (ev.pointerId === id) soltar(); });
+  window.addEventListener('blur', soltar);
+  // Al abrir un diálogo o panel, el personaje se detiene
+  new MutationObserver(() => { if (id !== null && (!modal.classList.contains('oculto') || document.body.classList.contains('cajon-abierto'))) soltar(); })
+    .observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+}
+if (hay3D) crearJoystick();
+
+// En celulares evita el zoom accidental por doble toque y el gesto de pellizco sobre la interfaz
+document.addEventListener('dblclick', ev => { if (document.body.classList.contains('modo-3d')) ev.preventDefault(); });
+document.addEventListener('gesturestart', ev => ev.preventDefault());
+
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
@@ -144,13 +195,16 @@ function renderInicio() {
     encolar('👋 ¡Bienvenido al mundo del emprendimiento!', `
       <p>Hola <b>${esc(G.jugador)}</b>. Para que <b>${esc(G.empresa)}</b> pueda abrir, necesitas completar varios trámites.</p>
       <ul>
-        <li>Camina con <b>WASD</b> (Shift para correr) o haz <b>clic</b> donde quieras ir. Arrastra el mouse para mirar.</li>
-        <li>Entra a los edificios y habla con los funcionarios (<b>E</b>). En las oficinas públicas primero <b>saca número</b> en el tótem.</li>
+        ${esTactil
+          ? `<li>Camina con el <b>joystick</b> (abajo a la izquierda; empújalo al borde para correr) o <b>toca</b> donde quieras ir. Desliza el dedo para mirar y pellizca para acercar.</li>
+        <li>Entra a los edificios y habla con los funcionarios con el <b>botón de acción</b>.`
+          : `<li>Camina con <b>WASD</b> (Shift para correr) o haz <b>clic</b> donde quieras ir. Arrastra el mouse para mirar.</li>
+        <li>Entra a los edificios y habla con los funcionarios (<b>E</b>).`} En las oficinas públicas primero <b>saca número</b> en el tótem.</li>
         <li>El haz de luz amarilla marca tu <b>próximo paso</b>. El sitio con el letrero <b>"SE ARRIENDA"</b> será tu negocio.</li>
         <li>Las oficinas públicas atienden de <b>lunes a viernes, de 9:00 a 14:00</b>. A las 21:00 te vas a casa.</li>
         <li>Si te rechazan, pierdes el día y <b>paciencia</b>. Si llega a cero, colapsas.</li>
         <li>Cuando arriendes el local, el <b>arriendo corre</b> todos los meses: ¡no te demores!</li>
-        <li><b>T</b> trámites · <b>B</b> bitácora · <b>M</b> sonido.</li>
+        ${esTactil ? '<li>Toca la <b>barra amarilla</b> para ir caminando solo al próximo trámite.</li>' : '<li><b>T</b> trámites · <b>B</b> bitácora · <b>M</b> sonido.</li>'}
       </ul>`, [{ texto: '¡Vamos!' }]);
     render();
     window.scrollTo(0, 0);
@@ -209,7 +263,7 @@ function renderJuego3D() {
     <div class="hud-objetivo" data-ir="${obj.lugar || ''}">🎯 <span>${obj.texto}</span></div>
     <div class="hud-fila" id="hudFila"></div>
     <button class="hud-prompt oculto" id="hudPrompt"></button>
-    <div class="hud-ayuda">${enNegocio ? 'Acércate a la caja para gestionar · ' : ''}WASD caminar · Shift correr · arrastra para mirar · E interactuar · Q/R girar</div>
+    <div class="hud-ayuda">${enNegocio ? 'Acércate a la caja para gestionar · ' : ''}${esTactil ? 'Joystick para caminar · toca para ir · desliza para mirar · pellizca para acercar' : 'WASD caminar · Shift correr · arrastra para mirar · E interactuar · Q/R girar'}</div>
 
     <aside class="cajon ${cajon ? 'abierto' : ''}">
       <div class="cajon-cabecera"><b>${titulosCajon[cajon] || ''}</b><button class="btn chico" data-cajon="${cajon}">✕</button></div>
@@ -243,7 +297,7 @@ function actualizarPrompt(texto) {
   const el = document.getElementById('hudPrompt');
   if (!el) return;
   el.classList.toggle('oculto', !texto);
-  el.innerHTML = texto ? `<kbd>E</kbd> ${esc(texto)}` : '';
+  el.innerHTML = texto ? `${esTactil ? '<span class="toque">👆</span>' : '<kbd>E</kbd>'} ${esc(texto)}` : '';
 }
 
 function actualizarFila(f) {

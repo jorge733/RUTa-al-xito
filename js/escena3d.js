@@ -26,6 +26,7 @@ const Escena3D = (() => {
   let pickables = [];
   let npcs = [];
   const teclas = {};
+  const joy = { x: 0, y: 0 };      // joystick táctil (-1..1)
   const v = new THREE.Vector3();
 
   // ----------------------------------------------------------
@@ -371,6 +372,8 @@ const Escena3D = (() => {
       if (teclas.s || teclas.arrowdown) dz -= 1;
       if (teclas.a || teclas.arrowleft) dx -= 1;
       if (teclas.d || teclas.arrowright) dx += 1;
+      const fuerzaJoy = Math.hypot(joy.x, joy.y);
+      if (fuerzaJoy > 0.15) { dx += joy.x; dz -= joy.y; }
       const fx = Math.cos(yaw), fz = Math.sin(yaw);
       if (dx || dz) {
         objetivo = null; accionAlLlegar = null;
@@ -396,7 +399,7 @@ const Escena3D = (() => {
         }
       }
       if (mx || mz) {
-        const correr = teclas.shift ? 1.7 : 1;
+        const correr = (teclas.shift || fuerzaJoy > 0.92) ? 1.7 : 1;
         const paso = Math.min(VELOCIDAD * correr * dt, objetivo ? Math.hypot(objetivo.x - p.x, objetivo.z - p.z) : 99);
         p.x += mx * paso; p.z += mz * paso;
         const rot = Math.atan2(mx, mz);
@@ -410,7 +413,7 @@ const Escena3D = (() => {
       }
     }
     resolverColisiones(p);
-    M.animarPersona(jugador, moviendo ? (teclas.shift ? 1.3 : 1) : 0, tiempo);
+    M.animarPersona(jugador, moviendo ? ((teclas.shift || Math.hypot(joy.x, joy.y) > 0.92) ? 1.3 : 1) : 0, tiempo);
 
     // Salir caminando hacia la puerta
     if (modo === 'interior' && moviendo && mz > 0.5 && p.z > M.LIMITES_INTERIOR.z1 - 0.15 && Math.abs(p.x) < 1.2) volverAlExterior();
@@ -585,12 +588,26 @@ const Escena3D = (() => {
   // ----------------------------------------------------------
   function configurarEntrada() {
     let inicio = null, arrastrando = false;
+    const punteros = new Map();
+    let pellizco = null;
+    const distPunteros = () => { const [a, b] = [...punteros.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+    const quitarPuntero = ev => { punteros.delete(ev.pointerId); if (punteros.size < 2) pellizco = null; };
+    canvas.addEventListener('pointercancel', ev => { quitarPuntero(ev); inicio = null; });
     canvas.addEventListener('pointerdown', ev => {
+      punteros.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (punteros.size === 2) { pellizco = { d: distPunteros(), dist }; inicio = null; return; }
+      if (punteros.size > 2) return;
       inicio = { x: ev.clientX, y: ev.clientY, yaw, pitch };
       arrastrando = false;
       canvas.setPointerCapture(ev.pointerId);
     });
     canvas.addEventListener('pointermove', ev => {
+      if (punteros.has(ev.pointerId)) punteros.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (pellizco && punteros.size === 2) {
+        const d = distPunteros();
+        if (d > 10) dist = clamp(pellizco.dist * pellizco.d / d, 2.2, modo === 'exterior' ? 16 : 5.5);
+        return;
+      }
       if (!inicio) return;
       const dx = ev.clientX - inicio.x, dy = ev.clientY - inicio.y;
       if (!arrastrando && Math.hypot(dx, dy) > 6) arrastrando = true;
@@ -600,9 +617,10 @@ const Escena3D = (() => {
       }
     });
     canvas.addEventListener('pointerup', ev => {
+      quitarPuntero(ev);
       const fueClic = inicio && !arrastrando;
       inicio = null;
-      if (!fueClic || modalAbierto() || enTransicion) return;
+      if (!fueClic || pellizco || modalAbierto() || enTransicion) return;
       Audio3D.iniciar();
       const rect = canvas.getBoundingClientRect();
       const ndc = new THREE.Vector2(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
@@ -648,7 +666,7 @@ const Escena3D = (() => {
       if (k === 'r') yaw += 0.25;
     });
     window.addEventListener('keyup', ev => { teclas[ev.key.toLowerCase()] = false; });
-    window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; });
+    window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; joy.x = joy.y = 0; });
     window.addEventListener('resize', ajustarTamano);
   }
 
@@ -673,7 +691,7 @@ const Escena3D = (() => {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = movil ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     M.setRenderer(renderer);
 
     sceneExt = new THREE.Scene();
@@ -738,6 +756,8 @@ const Escena3D = (() => {
     init, montar, actualizar, irA, setObjetivo, salirCuandoTermine, refrescarInterior,
     esperarTurno, terminarFila, volverAlExterior: () => { if (modo === 'interior') volverAlExterior(); },
     interactuar: () => interactuar(interactivoCercano()),
+    setJoystick: (x, y) => { joy.x = x; joy.y = y; if (x || y) Audio3D.iniciar(); },
+    girar: d => { yaw += d; },
     get disponible() { return ok; },
     _puerta: id => { const e = edificios[id]; jugador.position.copy(e.puerta).multiplyScalar(0.92); },
     get _debug() { return { camera, jugador, sceneExt, renderer, ext, interior }; },
