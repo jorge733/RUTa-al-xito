@@ -135,11 +135,30 @@ function render() {
 // ------------------------------------------------------------
 //  Pantalla de inicio
 // ------------------------------------------------------------
+const CIUDAD_SVG = `<svg class="hero-ciudad" viewBox="0 0 1200 220" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0 150 L120 70 L190 115 L300 30 L380 95 L470 55 L560 120 L660 40 L760 105 L850 60 L960 125 L1060 50 L1200 110 L1200 220 L0 220Z" fill="#2c5bb8" opacity=".55"/>
+  <path d="M260 52 L300 30 L338 54 L318 50 L300 60 L282 50Z M630 58 L660 40 L688 60 L670 56 L660 64 L648 56Z M1030 66 L1060 50 L1088 70 L1070 64 L1060 72 L1048 64Z" fill="#fff" opacity=".7"/>
+  <g fill="#0a2f72">
+    <rect x="20" y="140" width="70" height="80"/><rect x="100" y="110" width="55" height="110"/><rect x="165" y="150" width="80" height="70"/>
+    <rect x="255" y="95" width="45" height="125"/><rect x="310" y="130" width="90" height="90"/><rect x="410" y="80" width="60" height="140"/>
+    <rect x="480" y="125" width="75" height="95"/><rect x="565" y="100" width="50" height="120"/><rect x="625" y="145" width="95" height="75"/>
+    <rect x="730" y="70" width="55" height="150"/><rect x="795" y="120" width="70" height="100"/><rect x="875" y="95" width="60" height="125"/>
+    <rect x="945" y="140" width="85" height="80"/><rect x="1040" y="105" width="50" height="115"/><rect x="1100" y="135" width="100" height="85"/>
+  </g>
+  <g fill="#ffd24a" opacity=".75">
+    <rect x="112" y="125" width="8" height="10"/><rect x="132" y="150" width="8" height="10"/><rect x="420" y="100" width="8" height="10"/>
+    <rect x="445" y="130" width="8" height="10"/><rect x="742" y="90" width="8" height="10"/><rect x="762" y="125" width="8" height="10"/>
+    <rect x="575" y="120" width="8" height="10"/><rect x="890" y="115" width="8" height="10"/><rect x="1052" y="125" width="8" height="10"/>
+    <rect x="268" y="115" width="8" height="10"/><rect x="330" y="150" width="8" height="10"/><rect x="960" y="160" width="8" height="10"/>
+  </g>
+</svg>`;
+
 function renderInicio() {
   const guardada = hayPartidaGuardada();
   app.innerHTML = `
   <section class="inicio">
     <div class="hero">
+      ${CIUDAD_SVG}
       <div class="logo">RUT<span>a</span> al Éxito</div>
       <p class="lema">Tu empresa. Tus trámites. Tu paciencia. 🇨🇱</p>
       <p class="intro">Elige un rubro, constituye tu empresa, consigue todos los permisos y sobrevive un año
@@ -150,7 +169,7 @@ function renderInicio() {
     </div>
 
     <form id="formInicio" class="tarjeta form-inicio">
-      <h2>Nueva partida</h2>
+      <h2><span class="paso">1</span> ¿Quién emprende?</h2>
       <div class="campos">
         <label>Tu nombre
           <input name="jugador" required maxlength="30" placeholder="Ej: Camila Rojas">
@@ -159,24 +178,30 @@ function renderInicio() {
           <input name="empresa" required maxlength="40" placeholder="Ej: Café del Cerro">
         </label>
       </div>
-      <h3>Elige tu rubro</h3>
+      <h2><span class="paso">2</span> Elige tu rubro</h2>
       <div class="rubros">
         ${Object.values(RUBROS).map((r, i) => `
           <label class="rubro">
             <input type="radio" name="rubro" value="${r.id}" ${i === 0 ? 'checked' : ''}>
             <span class="rubro-caja">
-              <span class="rubro-emoji">${r.emoji}</span>
+              <span class="rubro-top">
+                <span class="rubro-emoji">${r.emoji}</span>
+                <span class="dif dif-${r.dificultad.toLowerCase()}">${r.dificultad}</span>
+              </span>
               <b>${r.nombre}</b>
               <small>${r.desc}</small>
               <span class="rubro-datos">
-                <span>Inversión: ${dinero(r.equipamiento)}</span>
-                <span>Arriendo: ${dinero(r.arriendo)}/mes</span>
-                <span class="dif dif-${r.dificultad.toLowerCase()}">${r.dificultad}</span>
+                <span><em>Inversión</em>${dinero(r.equipamiento)}</span>
+                <span><em>Arriendo</em>${dinero(r.arriendo)}<i>/mes</i></span>
               </span>
+              <span class="rubro-check" aria-hidden="true">✓</span>
             </span>
           </label>`).join('')}
       </div>
-      <button class="btn primario grande" type="submit">🚀 ¡Emprender!</button>
+      <div class="emprender">
+        <button class="btn primario grande" type="submit">🚀 ¡Emprender!</button>
+        <small>Partes con ${dinero(CAPITAL_INICIAL)} · ${SEMANAS_PARA_GANAR} semanas para triunfar</small>
+      </div>
     </form>
     <p class="nota">Los montos y plazos son aproximados y simplificados para el juego.</p>
   </section>`;
@@ -248,8 +273,8 @@ function renderJuego3D() {
     <div class="hud-arriba">
       <div class="hud-chip reloj"><b id="hudReloj">${horaTexto(G.hora)}</b><small>${textoFecha(fechaActual())}</small></div>
       <div class="hud-chip ${G.caja < 0 ? 'neg' : ''}"><small>💰 Caja</small><b>${dinero(G.caja)}</b></div>
-      <div class="hud-chip"><small>🧘 Paciencia</small><div class="barrita"><i style="width:${pac}%" class="${pac < 30 ? 'baja' : ''}"></i></div></div>
-      <div class="hud-chip"><small>⭐ Reputación</small><div class="barrita"><i style="width:${G.reputacion}%" class="rep"></i></div></div>
+      <div class="hud-chip ${pac < 30 ? 'alerta' : ''}"><small>🧘 Paciencia <b>${Math.round(pac)}</b></small><div class="barrita"><i style="width:${pac}%" class="${pac < 30 ? 'baja' : ''}"></i></div></div>
+      <div class="hud-chip"><small>⭐ Reputación <b>${Math.round(G.reputacion)}</b></small><div class="barrita"><i style="width:${G.reputacion}%" class="rep"></i></div></div>
       ${G.fase === 'operacion' ? `<div class="hud-chip"><small>📆 Semana</small><b>${G.semanasOperando}/${SEMANAS_PARA_GANAR}</b></div>` : ''}
     </div>
 
@@ -262,13 +287,17 @@ function renderJuego3D() {
       <button class="hud-btn" data-accion="menu" title="Menú">☰<span>Menú</span></button>
     </div>
 
-    <div class="hud-objetivo" data-ir="${obj.lugar || ''}">🎯 <span>${obj.texto}</span></div>
+    <div class="hud-objetivo ${obj.lugar ? 'con-destino' : ''}" data-ir="${obj.lugar || ''}" ${obj.lugar ? 'role="button" title="Ir caminando hasta allá"' : ''}>
+      <span class="obj-icono">🎯</span>
+      <span class="obj-texto">${G.fase === 'tramites' ? `<small>Trámites ${progresoTramites().listos}/${progresoTramites().total}</small>` : ''}<span>${obj.texto}</span></span>
+      ${obj.lugar ? '<span class="obj-ir">Ir ➜</span>' : ''}
+    </div>
     <div class="hud-fila" id="hudFila"></div>
     <button class="hud-prompt oculto" id="hudPrompt"></button>
     <div class="hud-ayuda">${enNegocio ? 'Acércate a la caja para gestionar · ' : ''}${esTactil ? 'Joystick para caminar · toca para ir · desliza para mirar · pellizca para acercar' : 'WASD caminar · Shift correr · arrastra para mirar · E interactuar · Q/R girar'}</div>
 
     <aside class="cajon ${cajon ? 'abierto' : ''}">
-      <div class="cajon-cabecera"><b>${titulosCajon[cajon] || ''}</b><button class="btn chico" data-cajon="${cajon}">✕</button></div>
+      <div class="cajon-cabecera"><b>${titulosCajon[cajon] || ''}</b><button class="cerrar" data-cajon="${cajon}" aria-label="Cerrar">✕</button></div>
       <div class="cajon-cuerpo">${contenidoCajon}</div>
     </aside>
   </div>`;
@@ -425,29 +454,44 @@ function barraEstado() {
   </header>`;
 }
 
+function progresoTramites() {
+  const obligatorios = tramitesAplicables().filter(esObligatorio);
+  return { listos: obligatorios.filter(t => hecho(t.id)).length, total: obligatorios.length };
+}
+
 function panelTramites() {
   const lista = tramitesAplicables();
   const obligatorios = lista.filter(esObligatorio);
-  const listos = obligatorios.filter(t => hecho(t.id)).length;
+  const { listos, total } = progresoTramites();
   const item = t => {
     const e = estadoTramite(t);
-    const icono = e === 'hecho' ? '✅' : e === 'disponible' ? '🟡' : '🔒';
-    const falta = e === 'bloqueado' ? `<small>Requiere: ${faltantes(t).map(id => nombreTramite(tramite(id))).join(', ')}</small>` : '';
+    const icono = e === 'hecho' ? '✅' : e === 'disponible' ? LUGARES[t.lugar].emoji : '🔒';
+    const falta = e === 'bloqueado' ? `<small class="requiere">Antes: ${faltantes(t).map(id => nombreTramite(tramite(id))).join(', ')}</small>` : '';
     const res = G.tramites[t.id] && G.tramites[t.id].resultado === 'perdido' ? ' <small>(no ganado)</small>' : '';
     return `<li class="tramite ${e}" data-lugar="${t.lugar}">
-      <span>${icono}</span>
-      <div><b>${nombreTramite(t)}</b>${res}<small>${LUGARES[t.lugar].emoji} ${LUGARES[t.lugar].nombre}</small>${falta}</div>
+      <span class="tramite-icono">${icono}</span>
+      <div><b>${nombreTramite(t)}</b>${res}<small>${e === 'disponible' ? '' : LUGARES[t.lugar].emoji + ' '}${LUGARES[t.lugar].nombre}</small>${falta}</div>
+      ${e === 'disponible' ? '<span class="tramite-ir">Ir ➜</span>' : ''}
     </li>`;
   };
+  // Primero lo que se puede hacer ahora, luego lo pendiente y al final lo terminado
+  const grupo = (titulo, ts, clase = '') => ts.length
+    ? `<h4 class="grupo-tramites ${clase}">${titulo} <span>${ts.length}</span></h4><ul class="lista-tramites">${ts.map(item).join('')}</ul>` : '';
+  const por = e => obligatorios.filter(t => estadoTramite(t) === e);
+  const opcionales = lista.filter(t => !esObligatorio(t));
   return `
-  <div class="tarjeta">
-    <h3>📋 Trámites para abrir <span class="contador">${listos}/${obligatorios.length}</span></h3>
-    <div class="progreso"><i style="width:${listos / obligatorios.length * 100}%"></i></div>
-    <ul class="lista-tramites">${obligatorios.map(item).join('')}</ul>
-    ${G.fase === 'tramites' ? `<button class="btn primario grande ancho" data-accion="abrir" ${puedeAbrir() ? '' : 'disabled'}>
-      🎊 Abrir el negocio</button>` : '<p class="ok">🎊 ¡Negocio abierto!</p>'}
-    <h3>✨ Opcionales</h3>
-    <ul class="lista-tramites">${lista.filter(t => !esObligatorio(t)).map(item).join('')}</ul>
+  <div class="tarjeta panel-tramites">
+    <h3>📋 Trámites para abrir <span class="contador">${listos}/${total}</span></h3>
+    <div class="progreso"><i style="width:${listos / total * 100}%"></i></div>
+    ${G.fase === 'tramites'
+      ? (puedeAbrir() ? `<button class="btn primario grande ancho brillo" data-accion="abrir">🎊 Abrir el negocio</button>` : '')
+      : '<p class="ok">🎊 ¡Negocio abierto!</p>'}
+    ${grupo('⚡ Puedes hacerlos ahora', por('disponible'), 'ahora')}
+    ${grupo('⏳ Pendientes', por('bloqueado'))}
+    ${grupo('✅ Listos', por('hecho'), 'listos')}
+    ${G.fase === 'tramites' && !puedeAbrir() ? `<button class="btn grande ancho" data-accion="abrir" disabled>🎊 Abrir el negocio · faltan ${total - listos}</button>` : ''}
+    ${opcionales.length ? `<h4 class="grupo-tramites">✨ Opcionales <span>${opcionales.length}</span></h4>
+    <ul class="lista-tramites">${opcionales.map(item).join('')}</ul>` : ''}
   </div>`;
 }
 
